@@ -27,28 +27,28 @@ const AnimatedCounter = ({ to, suffix = "" }: { to: number, suffix?: string }) =
 
 // ======================= VEG / PREMIUM ITEMS (9 Verified Safe Images) =======================
 const vegItems = [
-  { id: 1, url: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd', size: 'w-64 h-64 md:w-[340px] md:h-[340px]', x: 0, y: 0, z: 120, delay: 0, isMain: true, label: "GOURMET BURGER" },
-  { id: 2, url: 'https://images.unsplash.com/photo-1513104890138-7c749659a591', size: 'w-48 h-48 md:w-64 md:h-64', x: -350, y: -200, z: 80, delay: 0.5 }, // Pizza
-  { id: 3, url: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd', size: 'w-40 h-40 md:w-56 md:h-56', x: 350, y: -180, z: 90, delay: 1.2 }, // Salad
-  { id: 4, url: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38', size: 'w-36 h-36 md:w-48 md:h-48', x: -320, y: 250, z: 70, delay: 0.8 }, // Pancakes
-  { id: 5, url: 'https://images.unsplash.com/photo-1551504734-5ee1c4a1479b', size: 'w-40 h-40 md:w-52 md:h-52', x: 340, y: 220, z: 60, delay: 1.5 }, // Tacos
-  { id: 6, url: 'https://images.unsplash.com/photo-1473093295043-cdd812d0e601', size: 'w-32 h-32 md:w-44 md:h-44', x: 0, y: -380, z: 50, delay: 0.3 }, // Pasta
-  { id: 7, url: 'https://images.unsplash.com/photo-1497935586351-b67a49e012bf', size: 'w-32 h-32 md:w-40 md:h-40', x: 0, y: 380, z: 45, delay: 1.8 }, // Coffee
-  { id: 8, url: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587', size: 'w-28 h-28 md:w-36 md:h-36', x: -550, y: 50, z: 40, delay: 2.1 }, // Cake
-  { id: 9, url: 'https://images.unsplash.com/photo-1497034825429-c343d7c6a68f', size: 'w-28 h-28 md:w-36 md:h-36', x: 550, y: 20, z: 35, delay: 1.1 }, // Ice Cream
+  { id: 1, url: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd', size: 'w-64 h-64 md:w-[340px] md:h-[340px]', pos: 'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2', z: 120, delay: 0, isMain: true, label: "GOURMET BURGER" },
+  { id: 2, url: 'https://images.unsplash.com/photo-1513104890138-7c749659a591', size: 'w-32 h-32 md:w-64 md:h-64', pos: 'left-[2%] top-[5%] md:left-[10%] md:top-[10%]', z: 80, delay: 0.5 }, // Pizza
+  { id: 3, url: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd', size: 'w-24 h-24 md:w-56 md:h-56', pos: 'right-[2%] top-[10%] md:right-[10%] md:top-[12%]', z: 90, delay: 1.2 }, // Salad
+  { id: 4, url: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38', size: 'w-28 h-28 md:w-48 md:h-48', pos: 'left-[5%] bottom-[5%] md:left-[12%] md:bottom-[15%]', z: 70, delay: 0.8 }, // Pancakes
+  { id: 5, url: 'https://images.unsplash.com/photo-1551504734-5ee1c4a1479b', size: 'w-32 h-32 md:w-52 md:h-52', pos: 'right-[5%] bottom-[8%] md:right-[15%] md:bottom-[20%]', z: 60, delay: 1.5 }, // Tacos
+  { id: 6, url: 'https://images.unsplash.com/photo-1473093295043-cdd812d0e601', size: 'w-20 h-20 md:w-44 md:h-44', pos: 'left-1/2 top-[2%] -translate-x-1/2 md:top-[5%]', z: 50, delay: 0.3 }, // Pasta
+  { id: 7, url: 'https://images.unsplash.com/photo-1497935586351-b67a49e012bf', size: 'w-20 h-20 md:w-40 md:h-40', pos: 'left-1/2 bottom-[2%] -translate-x-1/2 md:bottom-[5%]', z: 45, delay: 1.8 }, // Coffee
+  { id: 8, url: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587', size: 'w-16 h-16 md:w-36 md:h-36', pos: 'left-[-5%] top-[40%] md:left-[2%] md:top-[45%]', z: 40, delay: 2.1 }, // Cake
+  { id: 9, url: 'https://images.unsplash.com/photo-1497034825429-c343d7c6a68f', size: 'w-16 h-16 md:w-36 md:h-36', pos: 'right-[-5%] top-[50%] md:right-[2%] md:top-[40%]', z: 35, delay: 1.1 }, // Ice Cream
 ];
 
 // ======================= NON-VEG / MEAT ITEMS (9 Verified Safe Images) =======================
 const nonVegItems = [
-  { id: 1, url: 'https://images.unsplash.com/photo-1600891964092-4316c288032e', size: 'w-64 h-64 md:w-[340px] md:h-[340px]', x: 0, y: 0, z: 120, delay: 0, isMain: true, label: "PREMIUM STEAK" },
-  { id: 2, url: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1', size: 'w-48 h-48 md:w-64 md:h-64', x: -350, y: -200, z: 80, delay: 0.5 }, // Ribs
-  { id: 3, url: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c', size: 'w-40 h-40 md:w-56 md:h-56', x: 350, y: -180, z: 90, delay: 1.2 }, // Meat Plate
-  { id: 4, url: 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d', size: 'w-36 h-36 md:w-48 md:h-48', x: -320, y: 250, z: 70, delay: 0.8 }, // Fried Chicken
-  { id: 5, url: 'https://images.unsplash.com/photo-1524114664604-cd8133cd67ad', size: 'w-40 h-40 md:w-52 md:h-52', x: 340, y: 220, z: 60, delay: 1.5 }, // Wings
-  { id: 6, url: 'https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba', size: 'w-32 h-32 md:w-44 md:h-44', x: 0, y: -380, z: 50, delay: 0.3 }, // BBQ
-  { id: 7, url: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd', size: 'w-32 h-32 md:w-40 md:h-40', x: 0, y: 380, z: 45, delay: 1.8 }, // Burger
-  { id: 8, url: 'https://images.unsplash.com/photo-1513104890138-7c749659a591', size: 'w-28 h-28 md:w-36 md:h-36', x: -550, y: 50, z: 40, delay: 2.1 }, // Pizza
-  { id: 9, url: 'https://images.unsplash.com/photo-1598514982205-f36b96d1e8d4', size: 'w-28 h-28 md:w-36 md:h-36', x: 550, y: 20, z: 35, delay: 1.1 }, // Kabab
+  { id: 1, url: 'https://images.unsplash.com/photo-1600891964092-4316c288032e', size: 'w-64 h-64 md:w-[340px] md:h-[340px]', pos: 'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2', z: 120, delay: 0, isMain: true, label: "PREMIUM STEAK" },
+  { id: 2, url: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1', size: 'w-32 h-32 md:w-64 md:h-64', pos: 'left-[2%] top-[5%] md:left-[10%] md:top-[10%]', z: 80, delay: 0.5 }, // Ribs
+  { id: 3, url: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c', size: 'w-24 h-24 md:w-56 md:h-56', pos: 'right-[2%] top-[10%] md:right-[10%] md:top-[12%]', z: 90, delay: 1.2 }, // Meat Plate
+  { id: 4, url: 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d', size: 'w-28 h-28 md:w-48 md:h-48', pos: 'left-[5%] bottom-[5%] md:left-[12%] md:bottom-[15%]', z: 70, delay: 0.8 }, // Fried Chicken
+  { id: 5, url: 'https://images.unsplash.com/photo-1524114664604-cd8133cd67ad', size: 'w-32 h-32 md:w-52 md:h-52', pos: 'right-[5%] bottom-[8%] md:right-[15%] md:bottom-[20%]', z: 60, delay: 1.5 }, // Wings
+  { id: 6, url: 'https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba', size: 'w-20 h-20 md:w-44 md:h-44', pos: 'left-1/2 top-[2%] -translate-x-1/2 md:top-[5%]', z: 50, delay: 0.3 }, // BBQ
+  { id: 7, url: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd', size: 'w-20 h-20 md:w-40 md:h-40', pos: 'left-1/2 bottom-[2%] -translate-x-1/2 md:bottom-[5%]', z: 45, delay: 1.8 }, // Burger
+  { id: 8, url: 'https://images.unsplash.com/photo-1513104890138-7c749659a591', size: 'w-16 h-16 md:w-36 md:h-36', pos: 'left-[-5%] top-[40%] md:left-[2%] md:top-[45%]', z: 40, delay: 2.1 }, // Pizza
+  { id: 9, url: 'https://images.unsplash.com/photo-1598514982205-f36b96d1e8d4', size: 'w-16 h-16 md:w-36 md:h-36', pos: 'right-[-5%] top-[50%] md:right-[2%] md:top-[40%]', z: 35, delay: 1.1 }, // Kabab
 ];
 
 // ======================= ANIMATED PREMIUM BACKGROUNDS =======================
@@ -135,18 +135,18 @@ const FloatingScene = ({ items, type }: { items: typeof vegItems, type: 'veg' | 
   const handleMouseLeave = () => { x.set(0); y.set(0); };
 
   const isVeg = type === 'veg';
-  const scale = isMobile ? 0.35 : 1; // Scale down coordinates significantly on mobile
 
   return (
-    <div className="relative w-full max-w-6xl h-[500px] md:h-[800px] mx-auto perspective-[1200px] mt-10" onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave} ref={ref}>
-      <motion.div style={{ transformStyle: "preserve-3d", transform }} className="w-full h-full relative flex items-center justify-center">
+    <div className="relative w-full max-w-6xl h-[450px] md:h-[800px] mx-auto perspective-[1200px] mt-10 md:mt-2" onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave} ref={ref}>
+      <motion.div style={{ transformStyle: "preserve-3d", transform }} className="w-full h-full relative">
         {items.map((item) => {
            return (
-            <motion.div key={item.id} initial={{ x: item.x * scale, y: item.y * scale, z: item.z }}
-              animate={{ y: [(item.y * scale) - 15, (item.y * scale) + 15, (item.y * scale) - 15], rotateZ: item.isMain ? [0, 5, 0] : [0, item.x > 0 ? 10 : -10, 0] }}
+            <motion.div key={item.id} 
+              initial={{ y: 0 }}
+              animate={{ y: [-15, 15, -15] }}
               transition={{ duration: 6 + (item.delay * 2), repeat: Infinity, ease: "easeInOut", delay: item.delay }}
               style={{ zIndex: item.z > 50 ? 30 : item.z > 20 ? 20 : 10 }}
-              className={`absolute ${item.size} rounded-full border ${isVeg ? 'border-emerald-500/20 bg-emerald-950/50' : 'border-red-500/20 bg-red-950/50'} overflow-hidden shadow-2xl flex items-center justify-center ${item.isMain ? `border-4 ring-8 ${isVeg ? 'ring-emerald-500/30 shadow-[0_30px_80px_rgba(16,185,129,0.5)]' : 'ring-red-600/30 shadow-[0_30px_80px_rgba(220,38,38,0.5)]'}` : 'opacity-95 hover:opacity-100 hover:scale-110 transition-transform cursor-pointer'}`}
+              className={`absolute ${item.pos} ${item.size} rounded-full border ${isVeg ? 'border-emerald-500/20 bg-emerald-950/50' : 'border-red-500/20 bg-red-950/50'} overflow-hidden shadow-2xl flex items-center justify-center ${item.isMain ? `border-4 ring-8 ${isVeg ? 'ring-emerald-500/30 shadow-[0_30px_80px_rgba(16,185,129,0.5)]' : 'ring-red-600/30 shadow-[0_30px_80px_rgba(220,38,38,0.5)]'}` : 'opacity-95 hover:opacity-100 hover:scale-110 transition-transform cursor-pointer'}`}
             >
               <img src={`${item.url}?q=80&w=800&auto=format&fit=crop`} alt="Food" className="w-full h-full object-cover" />
               {item.isMain && (
@@ -162,19 +162,19 @@ const FloatingScene = ({ items, type }: { items: typeof vegItems, type: 'veg' | 
         {/* Floating Accent Badges - Scaled for Mobile */}
         {isVeg ? (
           <>
-            <motion.div initial={{ x: isMobile ? 0 : -200, y: isMobile ? -180 : -50, z: 150 }} animate={{ y: isMobile ? [-180, -170, -180] : [-50, -30, -50] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }} className="absolute z-40 px-4 py-2 md:px-6 md:py-4 bg-emerald-950/80 backdrop-blur-xl rounded-full border border-emerald-500/50 text-emerald-400 font-bold text-xs md:text-lg flex items-center shadow-[0_0_30px_rgba(16,185,129,0.4)]">
+            <motion.div initial={{ y: 0 }} animate={{ y: [-10, 10, -10] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }} className="absolute z-40 top-[-5%] left-[5%] md:top-[10%] md:left-[10%] px-4 py-2 md:px-6 md:py-4 bg-emerald-950/80 backdrop-blur-xl rounded-full border border-emerald-500/50 text-emerald-400 font-bold text-xs md:text-lg flex items-center shadow-[0_0_30px_rgba(16,185,129,0.4)]">
               <Star className="w-4 h-4 md:w-6 md:h-6 mr-2 fill-emerald-400" /> 4.9 Top Rated
             </motion.div>
-            <motion.div initial={{ x: isMobile ? 0 : 200, y: isMobile ? 180 : 100, z: 130 }} animate={{ y: isMobile ? [180, 190, 180] : [100, 120, 100] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }} className="absolute z-40 px-4 py-2 md:px-6 md:py-4 bg-teal-950/80 backdrop-blur-xl rounded-full border border-teal-500/50 text-teal-400 font-bold text-xs md:text-lg flex items-center shadow-[0_0_30px_rgba(20,184,166,0.4)]">
+            <motion.div initial={{ y: 0 }} animate={{ y: [10, -10, 10] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }} className="absolute z-40 bottom-[-5%] right-[5%] md:bottom-[15%] md:right-[10%] px-4 py-2 md:px-6 md:py-4 bg-teal-950/80 backdrop-blur-xl rounded-full border border-teal-500/50 text-teal-400 font-bold text-xs md:text-lg flex items-center shadow-[0_0_30px_rgba(20,184,166,0.4)]">
               <Utensils className="w-4 h-4 md:w-6 md:h-6 mr-2" /> 10,000+ Dishes
             </motion.div>
           </>
         ) : (
           <>
-            <motion.div initial={{ x: isMobile ? 0 : -200, y: isMobile ? -180 : -50, z: 150 }} animate={{ y: isMobile ? [-180, -170, -180] : [-50, -30, -50] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }} className="absolute z-40 px-4 py-2 md:px-6 md:py-4 bg-red-950/80 backdrop-blur-xl rounded-full border border-red-500/50 text-red-400 font-bold text-xs md:text-lg flex items-center shadow-[0_0_30px_rgba(220,38,38,0.5)]">
+            <motion.div initial={{ y: 0 }} animate={{ y: [-10, 10, -10] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }} className="absolute z-40 top-[-5%] left-[5%] md:top-[10%] md:left-[10%] px-4 py-2 md:px-6 md:py-4 bg-red-950/80 backdrop-blur-xl rounded-full border border-red-500/50 text-red-400 font-bold text-xs md:text-lg flex items-center shadow-[0_0_30px_rgba(220,38,38,0.5)]">
               <Flame className="w-4 h-4 md:w-6 md:h-6 mr-2 fill-red-500" /> Spicy & Smoky
             </motion.div>
-            <motion.div initial={{ x: isMobile ? 0 : 200, y: isMobile ? 180 : 100, z: 130 }} animate={{ y: isMobile ? [180, 190, 180] : [100, 120, 100] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }} className="absolute z-40 px-4 py-2 md:px-6 md:py-4 bg-orange-950/80 backdrop-blur-xl rounded-full border border-orange-500/50 text-orange-400 font-bold text-xs md:text-lg flex items-center shadow-[0_0_30px_rgba(249,115,22,0.4)]">
+            <motion.div initial={{ y: 0 }} animate={{ y: [10, -10, 10] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }} className="absolute z-40 bottom-[-5%] right-[5%] md:bottom-[15%] md:right-[10%] px-4 py-2 md:px-6 md:py-4 bg-orange-950/80 backdrop-blur-xl rounded-full border border-orange-500/50 text-orange-400 font-bold text-xs md:text-lg flex items-center shadow-[0_0_30px_rgba(249,115,22,0.4)]">
               <Utensils className="w-4 h-4 md:w-6 md:h-6 mr-2" /> Premium Cuts
             </motion.div>
           </>
