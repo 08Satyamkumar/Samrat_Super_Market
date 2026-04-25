@@ -141,9 +141,6 @@ const FloatingScene = ({ items, type }: { items: typeof vegItems, type: 'veg' | 
     <div className="relative w-full max-w-6xl h-[500px] md:h-[800px] mx-auto perspective-[1200px] mt-10" onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave} ref={ref}>
       <motion.div style={{ transformStyle: "preserve-3d", transform }} className="w-full h-full relative flex items-center justify-center">
         {items.map((item) => {
-           // Hide far-edge decorative images on mobile to prevent clutter
-           if (isMobile && !item.isMain && (Math.abs(item.x) > 400 || Math.abs(item.y) > 300)) return null;
-
            return (
             <motion.div key={item.id} initial={{ x: item.x * scale, y: item.y * scale, z: item.z }}
               animate={{ y: [(item.y * scale) - 15, (item.y * scale) + 15, (item.y * scale) - 15], rotateZ: item.isMain ? [0, 5, 0] : [0, item.x > 0 ? 10 : -10, 0] }}
