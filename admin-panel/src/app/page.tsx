@@ -116,8 +116,16 @@ const FloatingScene = ({ items, type }: { items: typeof vegItems, type: 'veg' | 
   const ySpring = useSpring(y, { stiffness: 60, damping: 20 });
   const transform = useMotionTemplate`rotateX(${xSpring}deg) rotateY(${ySpring}deg)`;
 
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-    if (!ref.current) return;
+    if (!ref.current || isMobile) return;
     const rect = ref.current.getBoundingClientRect();
     const rX = (((e.clientY - rect.top) / rect.height) - 0.5) * -35; // Smoother rotation
     const rY = (((e.clientX - rect.left) / rect.width) - 0.5) * 35;
@@ -127,44 +135,50 @@ const FloatingScene = ({ items, type }: { items: typeof vegItems, type: 'veg' | 
   const handleMouseLeave = () => { x.set(0); y.set(0); };
 
   const isVeg = type === 'veg';
+  const scale = isMobile ? 0.35 : 1; // Scale down coordinates significantly on mobile
 
   return (
-    <div className="relative w-full max-w-6xl h-[600px] md:h-[800px] mx-auto perspective-[1200px] mt-10" onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave} ref={ref}>
+    <div className="relative w-full max-w-6xl h-[500px] md:h-[800px] mx-auto perspective-[1200px] mt-10" onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave} ref={ref}>
       <motion.div style={{ transformStyle: "preserve-3d", transform }} className="w-full h-full relative flex items-center justify-center">
-        {items.map((item) => (
-          <motion.div key={item.id} initial={{ x: item.x, y: item.y, z: item.z }}
-            animate={{ y: [item.y - 20, item.y + 20, item.y - 20], rotateZ: item.isMain ? [0, 5, 0] : [0, item.x > 0 ? 15 : -15, 0] }}
-            transition={{ duration: 6 + (item.delay * 2), repeat: Infinity, ease: "easeInOut", delay: item.delay }}
-            style={{ zIndex: item.z > 50 ? 30 : item.z > 20 ? 20 : 10 }}
-            className={`absolute ${item.size} rounded-full border ${isVeg ? 'border-emerald-500/20 bg-emerald-950/50' : 'border-red-500/20 bg-red-950/50'} overflow-hidden shadow-2xl flex items-center justify-center ${item.isMain ? `border-4 ring-8 ${isVeg ? 'ring-emerald-500/30 shadow-[0_30px_80px_rgba(16,185,129,0.5)]' : 'ring-red-600/30 shadow-[0_30px_80px_rgba(220,38,38,0.5)]'}` : 'opacity-95 hover:opacity-100 hover:scale-110 transition-transform cursor-pointer'}`}
-          >
-            <img src={`${item.url}?q=80&w=800&auto=format&fit=crop`} alt="Food" className="w-full h-full object-cover" />
-            {item.isMain && (
-              <>
-                <div className={`absolute inset-0 bg-gradient-to-t ${isVeg ? 'from-emerald-950/90' : 'from-red-950/90'} via-black/10 to-transparent`}></div>
-                <div className="absolute bottom-8 text-center w-full font-black text-white tracking-widest text-2xl md:text-3xl drop-shadow-[0_4px_10px_rgba(0,0,0,0.8)]">{item.label}</div>
-              </>
-            )}
-          </motion.div>
-        ))}
+        {items.map((item) => {
+           // Hide far-edge decorative images on mobile to prevent clutter
+           if (isMobile && !item.isMain && (Math.abs(item.x) > 400 || Math.abs(item.y) > 300)) return null;
+
+           return (
+            <motion.div key={item.id} initial={{ x: item.x * scale, y: item.y * scale, z: item.z }}
+              animate={{ y: [(item.y * scale) - 15, (item.y * scale) + 15, (item.y * scale) - 15], rotateZ: item.isMain ? [0, 5, 0] : [0, item.x > 0 ? 10 : -10, 0] }}
+              transition={{ duration: 6 + (item.delay * 2), repeat: Infinity, ease: "easeInOut", delay: item.delay }}
+              style={{ zIndex: item.z > 50 ? 30 : item.z > 20 ? 20 : 10 }}
+              className={`absolute ${item.size} rounded-full border ${isVeg ? 'border-emerald-500/20 bg-emerald-950/50' : 'border-red-500/20 bg-red-950/50'} overflow-hidden shadow-2xl flex items-center justify-center ${item.isMain ? `border-4 ring-8 ${isVeg ? 'ring-emerald-500/30 shadow-[0_30px_80px_rgba(16,185,129,0.5)]' : 'ring-red-600/30 shadow-[0_30px_80px_rgba(220,38,38,0.5)]'}` : 'opacity-95 hover:opacity-100 hover:scale-110 transition-transform cursor-pointer'}`}
+            >
+              <img src={`${item.url}?q=80&w=800&auto=format&fit=crop`} alt="Food" className="w-full h-full object-cover" />
+              {item.isMain && (
+                <>
+                  <div className={`absolute inset-0 bg-gradient-to-t ${isVeg ? 'from-emerald-950/90' : 'from-red-950/90'} via-black/10 to-transparent`}></div>
+                  <div className="absolute bottom-6 md:bottom-8 text-center w-full font-black text-white tracking-widest text-lg md:text-3xl drop-shadow-[0_4px_10px_rgba(0,0,0,0.8)]">{item.label}</div>
+                </>
+              )}
+            </motion.div>
+          )
+        })}
         
-        {/* Floating Accent Badges */}
+        {/* Floating Accent Badges - Scaled for Mobile */}
         {isVeg ? (
           <>
-            <motion.div initial={{ x: -200, y: -50, z: 150 }} animate={{ y: [-50, -30, -50] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }} className="absolute z-40 px-6 py-4 bg-emerald-950/80 backdrop-blur-xl rounded-full border border-emerald-500/50 text-emerald-400 font-bold text-sm md:text-lg flex items-center shadow-[0_0_30px_rgba(16,185,129,0.4)]">
-              <Star className="w-6 h-6 mr-2 fill-emerald-400" /> 4.9 Top Rated Sellers
+            <motion.div initial={{ x: isMobile ? 0 : -200, y: isMobile ? -180 : -50, z: 150 }} animate={{ y: isMobile ? [-180, -170, -180] : [-50, -30, -50] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }} className="absolute z-40 px-4 py-2 md:px-6 md:py-4 bg-emerald-950/80 backdrop-blur-xl rounded-full border border-emerald-500/50 text-emerald-400 font-bold text-xs md:text-lg flex items-center shadow-[0_0_30px_rgba(16,185,129,0.4)]">
+              <Star className="w-4 h-4 md:w-6 md:h-6 mr-2 fill-emerald-400" /> 4.9 Top Rated
             </motion.div>
-            <motion.div initial={{ x: 200, y: 100, z: 130 }} animate={{ y: [100, 120, 100] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }} className="absolute z-40 px-6 py-4 bg-teal-950/80 backdrop-blur-xl rounded-full border border-teal-500/50 text-teal-400 font-bold text-sm md:text-lg flex items-center shadow-[0_0_30px_rgba(20,184,166,0.4)]">
-              <Utensils className="w-6 h-6 mr-2" /> 10,000+ Premium Dishes
+            <motion.div initial={{ x: isMobile ? 0 : 200, y: isMobile ? 180 : 100, z: 130 }} animate={{ y: isMobile ? [180, 190, 180] : [100, 120, 100] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }} className="absolute z-40 px-4 py-2 md:px-6 md:py-4 bg-teal-950/80 backdrop-blur-xl rounded-full border border-teal-500/50 text-teal-400 font-bold text-xs md:text-lg flex items-center shadow-[0_0_30px_rgba(20,184,166,0.4)]">
+              <Utensils className="w-4 h-4 md:w-6 md:h-6 mr-2" /> 10,000+ Dishes
             </motion.div>
           </>
         ) : (
           <>
-            <motion.div initial={{ x: -200, y: -50, z: 150 }} animate={{ y: [-50, -30, -50] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }} className="absolute z-40 px-6 py-4 bg-red-950/80 backdrop-blur-xl rounded-full border border-red-500/50 text-red-400 font-bold text-sm md:text-lg flex items-center shadow-[0_0_30px_rgba(220,38,38,0.5)]">
-              <Flame className="w-6 h-6 mr-2 fill-red-500" /> Spicy & Smoky
+            <motion.div initial={{ x: isMobile ? 0 : -200, y: isMobile ? -180 : -50, z: 150 }} animate={{ y: isMobile ? [-180, -170, -180] : [-50, -30, -50] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }} className="absolute z-40 px-4 py-2 md:px-6 md:py-4 bg-red-950/80 backdrop-blur-xl rounded-full border border-red-500/50 text-red-400 font-bold text-xs md:text-lg flex items-center shadow-[0_0_30px_rgba(220,38,38,0.5)]">
+              <Flame className="w-4 h-4 md:w-6 md:h-6 mr-2 fill-red-500" /> Spicy & Smoky
             </motion.div>
-            <motion.div initial={{ x: 200, y: 100, z: 130 }} animate={{ y: [100, 120, 100] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }} className="absolute z-40 px-6 py-4 bg-orange-950/80 backdrop-blur-xl rounded-full border border-orange-500/50 text-orange-400 font-bold text-sm md:text-lg flex items-center shadow-[0_0_30px_rgba(249,115,22,0.4)]">
-              <Utensils className="w-6 h-6 mr-2" /> Premium Cuts
+            <motion.div initial={{ x: isMobile ? 0 : 200, y: isMobile ? 180 : 100, z: 130 }} animate={{ y: isMobile ? [180, 190, 180] : [100, 120, 100] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }} className="absolute z-40 px-4 py-2 md:px-6 md:py-4 bg-orange-950/80 backdrop-blur-xl rounded-full border border-orange-500/50 text-orange-400 font-bold text-xs md:text-lg flex items-center shadow-[0_0_30px_rgba(249,115,22,0.4)]">
+              <Utensils className="w-4 h-4 md:w-6 md:h-6 mr-2" /> Premium Cuts
             </motion.div>
           </>
         )}
