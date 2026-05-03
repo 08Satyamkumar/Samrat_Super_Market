@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, Star, Clock, Flame, Utensils, SlidersHorizontal, Store, X, Menu, Plus, Minus, ShoppingBag, CheckCircle2, Loader2, CreditCard, Banknote } from "lucide-react";
+import { User, Star, Clock, Flame, Utensils, SlidersHorizontal, Store, X, Menu, Plus, Minus, ShoppingBag, CheckCircle2, Loader2, CreditCard, Banknote, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
