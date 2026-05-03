@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, Star, Clock, Flame, Utensils, SlidersHorizontal, Store, X, Menu, Plus, Minus, ShoppingBag, CheckCircle2, Loader2, CreditCard, Banknote, ChevronRight } from "lucide-react";
+import { User, Star, Clock, Flame, Utensils, SlidersHorizontal, Store, X, Menu, Plus, Minus, ShoppingBag, CheckCircle2, Loader2, CreditCard, Banknote, ChevronRight, Search } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -16,6 +16,7 @@ export default function UserHomePage() {
   // Sidebar / Drawer State
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeFilter, setActiveFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Cart State
   const [cart, setCart] = useState<any[]>([]);
@@ -92,9 +93,17 @@ export default function UserHomePage() {
   };
 
   const filteredProducts = products.filter(p => {
-    if (activeFilter === 'veg') return !isNonVeg(p.name);
-    if (activeFilter === 'non-veg') return isNonVeg(p.name);
-    return true; // 'all'
+    let matchesFilter = true;
+    if (activeFilter === 'veg') matchesFilter = !isNonVeg(p.name);
+    if (activeFilter === 'non-veg') matchesFilter = isNonVeg(p.name);
+    
+    let matchesSearch = true;
+    if (searchQuery.trim() !== '') {
+      matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                      (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()));
+    }
+    
+    return matchesFilter && matchesSearch;
   });
 
   // --- Cart Logic ---
@@ -323,101 +332,109 @@ export default function UserHomePage() {
 
         {/* The Infinite Food Feed */}
         <div>
-          <div className="flex items-center gap-2 mb-6">
-            <Flame className="w-6 h-6 text-orange-500" />
-            <h3 className="text-2xl font-black tracking-tight uppercase text-zinc-900">Infinite Food Feed</h3>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-2">
+              <Flame className="w-6 h-6 text-orange-500" />
+              <h3 className="text-2xl font-black tracking-tight uppercase text-zinc-900">Infinite Food Feed</h3>
+            </div>
+            
+            {/* Search Bar */}
+            <div className="relative w-full md:w-80">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
+              <input 
+                type="text" 
+                placeholder="Search for your favorite food..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-white border border-zinc-200 rounded-[1rem] pl-12 pr-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-shadow shadow-sm"
+              />
+            </div>
           </div>
 
           {loading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
               {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-                <div key={i} className="aspect-[4/5] bg-zinc-100 rounded-[2rem] animate-pulse" />
+                <div key={i} className="aspect-[4/5] bg-zinc-100 rounded-[1.5rem] animate-pulse" />
               ))}
             </div>
           ) : filteredProducts.length === 0 ? (
             <div className="text-center py-20 bg-white rounded-[2rem] border border-zinc-100 shadow-sm">
               <Utensils className="w-12 h-12 text-zinc-200 mx-auto mb-4" />
               <h3 className="text-2xl font-black text-zinc-400 mb-2">No Items Found</h3>
-              <p className="text-zinc-500 font-medium">Try changing your filters.</p>
+              <p className="text-zinc-500 font-medium">Try changing your filters or search query.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20">
               {filteredProducts.map((product) => {
                 const shop = product.shop_id || {};
                 const shopUrl = `/shop/${shop.shopSlug || shop.name?.toLowerCase().replace(/\s+/g, '-')}`;
                 const cartItem = cart.find(item => item._id === product._id);
                 
                 return (
-                  <div key={product._id} className="group bg-white rounded-[2rem] overflow-hidden flex flex-col h-full border border-zinc-100 shadow-sm hover:shadow-xl transition-all duration-300">
+                  <div key={product._id} className="bg-white border border-zinc-200/60 rounded-[1.5rem] overflow-hidden flex flex-col group hover:-translate-y-1.5 transition-all duration-500 relative shadow-sm hover:shadow-[0_20px_40px_-15px_rgba(249,115,22,0.15)]">
                     
-                    {/* Product Image */}
-                    <div className="relative w-full aspect-[4/3] overflow-hidden bg-zinc-100">
-                      <img 
-                        src={product.image || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&q=80"} 
-                        alt={product.name} 
-                        className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-105"
-                      />
-                    </div>
-
-                    {/* Product Info */}
-                    <div className="p-6 flex-1 flex flex-col">
-                      <div className="flex justify-between items-start gap-4 mb-2">
-                        <h4 className="text-lg font-black text-zinc-900 leading-tight line-clamp-2">
-                          {product.name}
-                        </h4>
+                    {/* Image Section */}
+                    <div className="h-56 w-full overflow-hidden relative">
+                      {/* Gradient overlay for better text readability */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10 pointer-events-none" />
+                      <img src={product.image || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&q=80"} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out" />
+                      
+                      {/* Veg/Non-Veg Badge */}
+                      <div className="absolute top-4 right-4 z-20 flex flex-col gap-2 items-end">
                         {isNonVeg(product.name) ? (
-                          <div className="shrink-0 w-4 h-4 rounded-sm border border-red-600 flex items-center justify-center mt-1"><div className="w-2 h-2 rounded-full bg-red-600"></div></div>
+                          <div className="shrink-0 w-5 h-5 rounded-md border-2 border-red-500 bg-white flex items-center justify-center shadow-lg"><div className="w-2.5 h-2.5 rounded-full bg-red-500"></div></div>
                         ) : (
-                          <div className="shrink-0 w-4 h-4 rounded-sm border border-green-600 flex items-center justify-center mt-1"><div className="w-2 h-2 rounded-full bg-green-600"></div></div>
+                          <div className="shrink-0 w-5 h-5 rounded-md border-2 border-green-500 bg-white flex items-center justify-center shadow-lg"><div className="w-2.5 h-2.5 rounded-full bg-green-500"></div></div>
                         )}
                       </div>
                       
-                      {/* Shop Brand Info (Dynamic & Clickable) */}
+                      {/* Price Tag */}
+                      <div className="absolute bottom-4 left-4 z-20 bg-orange-500/90 backdrop-blur-md text-white px-3.5 py-1 rounded-xl font-black text-lg shadow-[0_4px_20px_rgba(249,115,22,0.4)] border border-orange-400/50 flex items-center">
+                        <span className="text-orange-100 text-sm mr-0.5">₹</span>{product.price}
+                      </div>
+                    </div>
+
+                    {/* Content Section */}
+                    <div className="p-5 flex-1 flex flex-col bg-gradient-to-b from-white to-zinc-50/50">
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="font-bold text-xl leading-tight group-hover:text-orange-500 transition-colors line-clamp-1 text-zinc-900">{product.name}</h3>
+                      </div>
+
+                      {/* Shop Brand Info */}
                       <Link 
                         href={shopUrl}
-                        className="flex items-center gap-2 mb-4 px-2.5 py-1.5 rounded-lg bg-zinc-50 border border-zinc-100 hover:bg-zinc-100 self-start w-fit transition-colors cursor-pointer"
+                        className="flex items-center gap-2 mb-3 text-zinc-500 bg-zinc-100/80 px-2.5 py-1.5 rounded-lg border border-zinc-200/50 self-start transition-colors hover:bg-zinc-200 cursor-pointer"
                       >
                         {shop.logo && shop.logo !== 'https://via.placeholder.com/150' ? (
-                          <img src={shop.logo} alt={shop.name} className="w-4 h-4 rounded-full object-cover" />
+                          <img src={shop.logo} alt={shop.name} className="w-5 h-5 rounded-full object-cover border border-zinc-200" />
                         ) : (
-                          <div className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-black text-white" style={getGradientStyle(shop.themeColors || [shop.themeColor])}>
-                            {shop.name?.charAt(0)}
+                          <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black text-white" style={getGradientStyle(shop.themeColors || [shop.themeColor])}>
+                            {shop.name?.charAt(0) || 'S'}
                           </div>
                         )}
-                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">{shop.name}</span>
+                        <span className="text-xs font-semibold text-zinc-700">{shop.name || 'Unknown Shop'}</span>
                       </Link>
-
-                      <p className="text-sm text-zinc-500 line-clamp-2 leading-relaxed mb-6">
-                        {product.description || 'Delicious and fresh ingredients.'}
-                      </p>
                       
-                      {/* Bottom Row: Price & Actions */}
-                      <div className="mt-auto flex items-end justify-between">
-                        <div>
-                          <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest block mb-1">Price</span>
-                          <span className="text-2xl font-black drop-shadow-sm text-zinc-900">₹{product.price}</span>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          {cartItem ? (
-                            <div className="h-12 flex items-center justify-between rounded-2xl p-1 bg-zinc-50 border border-zinc-200">
-                              <button onClick={() => updateQuantity(product._id, -1)} className="w-10 h-10 flex items-center justify-center rounded-xl bg-white text-zinc-900 shadow-sm font-bold">-</button>
-                              <span className="font-black text-sm w-8 text-center text-zinc-900">{cartItem.quantity}</span>
-                              <button onClick={() => updateQuantity(product._id, 1)} className="w-10 h-10 flex items-center justify-center rounded-xl bg-zinc-900 text-white shadow-sm font-bold">+</button>
-                            </div>
-                          ) : (
-                            <button 
-                              onClick={() => addToCart(product)}
-                              className="w-12 h-12 shrink-0 flex items-center justify-center rounded-2xl bg-zinc-100 text-zinc-600 hover:bg-zinc-200 transition-all active:scale-95"
-                              title="Add to Cart"
-                            >
-                              <Plus className="w-5 h-5" />
-                            </button>
-                          )}
-                        </div>
+                      <p className="text-sm text-zinc-500 line-clamp-2 mb-5 leading-relaxed">{product.description || 'Delicious and fresh ingredients.'}</p>
+                      
+                      {/* Action Buttons */}
+                      <div className="mt-auto pt-4 border-t border-zinc-100">
+                        {cartItem ? (
+                          <div className="flex items-center justify-between bg-zinc-100 rounded-[1rem] p-1 border border-zinc-200/60 shadow-inner">
+                            <button onClick={() => updateQuantity(product._id, -1)} className="w-10 h-10 flex items-center justify-center rounded-xl bg-white text-zinc-900 shadow-sm font-bold text-lg transition-transform active:scale-95 hover:bg-zinc-50">-</button>
+                            <span className="font-black text-lg w-12 text-center text-zinc-900">{cartItem.quantity}</span>
+                            <button onClick={() => updateQuantity(product._id, 1)} className="w-10 h-10 flex items-center justify-center rounded-xl bg-orange-500 text-white shadow-sm font-bold text-lg transition-transform active:scale-95 hover:bg-orange-600">+</button>
+                          </div>
+                        ) : (
+                          <button 
+                            onClick={() => addToCart(product)}
+                            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white py-3 rounded-[1rem] font-bold text-[15px] transition-all shadow-md shadow-orange-500/20 hover:shadow-orange-500/40 active:scale-[0.98]"
+                          >
+                            <ShoppingBag className="w-4 h-4" /> Add to Cart
+                          </button>
+                        )}
                       </div>
                     </div>
-
                   </div>
                 );
               })}
