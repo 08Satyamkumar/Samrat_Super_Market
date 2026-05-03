@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { User, Mail, Phone, Lock, Store, MapPin, Tag, ArrowRight, ArrowLeft, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
+import { API_URL } from "@/lib/api";
 
 export default function SellerRegistration() {
   const [step, setStep] = useState(1);
@@ -40,7 +41,6 @@ export default function SellerRegistration() {
     setIsSubmitting(true);
     
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
       const response = await fetch(`${API_URL}/api/seller/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

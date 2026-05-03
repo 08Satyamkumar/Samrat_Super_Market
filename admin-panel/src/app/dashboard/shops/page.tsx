@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Check, X, Store, AlertCircle } from "lucide-react";
+import { API_URL } from "@/lib/api";
 
 export default function ShopsPage() {
   const [shops, setShops] = useState<any[]>([]);
@@ -11,7 +12,6 @@ export default function ShopsPage() {
 
   const fetchShops = async () => {
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
       const res = await fetch(`${API_URL}/api/admin/shops`);
       const data = await res.json();
       setShops(data);
@@ -28,7 +28,6 @@ export default function ShopsPage() {
 
   const handleStatusUpdate = async (id: string, newStatus: string) => {
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
       const res = await fetch(`${API_URL}/api/admin/shops/${id}/status`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },

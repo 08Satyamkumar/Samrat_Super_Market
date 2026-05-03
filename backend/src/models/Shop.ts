@@ -25,6 +25,27 @@ const shopSchema = new mongoose.Schema(
       type: String, // Cloudinary URL
       default: 'https://via.placeholder.com/150',
     },
+    bannerImage: {
+      type: String,
+      default: '', // Empty means fallback to default image
+    },
+    tagline: {
+      type: String,
+      default: 'Delicious Food, Delivered Fast.',
+    },
+    themeColor: {
+      type: String,
+      default: '#ffffff', // Default white theme
+    },
+    themeColors: {
+      type: [String],
+      default: ['#8b5cf6'],
+    },
+    shopSlug: {
+      type: String,
+      unique: true,
+      sparse: true, // Allow nulls initially if older shops don't have it
+    },
     isFeatured: {
       type: Boolean,
       default: false,
@@ -32,6 +53,30 @@ const shopSchema = new mongoose.Schema(
     commissionRate: {
       type: Number,
       default: 5, // 5% platform fee
+    },
+    isOpen: {
+      type: Boolean,
+      default: true,
+    },
+    openingTime: {
+      type: String,
+      default: '10:00 AM',
+    },
+    closingTime: {
+      type: String,
+      default: '10:00 PM',
+    },
+    estimatedDeliveryTime: {
+      type: String,
+      default: '30-45 mins',
+    },
+    upiId: {
+      type: String,
+      default: '',
+    },
+    qrCodeImage: {
+      type: String,
+      default: '',
     },
   },
   {

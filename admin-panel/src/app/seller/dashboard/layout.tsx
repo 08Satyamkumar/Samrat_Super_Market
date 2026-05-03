@@ -157,6 +157,20 @@ export default function SellerDashboardLayout({
           </nav>
 
           <div className="p-4 border-t border-border flex flex-col gap-3">
+            {/* View Shop Button */}
+            <Link href={`/shop/${shopName?.toLowerCase().replace(/\s+/g, '-') || 'demo-shop'}`}>
+              <div className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all group relative bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 shadow-[inset_0_0_10px_rgba(16,185,129,0.1)] ${!isSidebarOpen && "justify-center"}`}>
+                <Store className="w-5 h-5 shrink-0" />
+                {isSidebarOpen && <span className="font-semibold text-sm">View 3D Shop</span>}
+                
+                {!isSidebarOpen && (
+                  <div className="absolute left-14 bg-popover border border-border text-popover-foreground text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none z-50 shadow-xl">
+                    View 3D Shop
+                  </div>
+                )}
+              </div>
+            </Link>
+
             {/* Theme Toggle */}
             <button 
               onClick={toggleTheme}

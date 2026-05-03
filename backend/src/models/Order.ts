@@ -5,6 +5,14 @@ const orderSchema = new mongoose.Schema(
     user_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
+      required: false, // Optional for guest checkout
+    },
+    customerName: {
+      type: String,
+      required: true,
+    },
+    customerPhone: {
+      type: String,
       required: true,
     },
     shop_id: {
@@ -37,7 +45,7 @@ const orderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
+      enum: ['pending', 'processing', 'ready', 'shipped', 'delivered', 'cancelled'],
       default: 'pending',
     },
     paymentMethod: {
@@ -57,6 +65,9 @@ const orderSchema = new mongoose.Schema(
     },
     paidAt: {
       type: Date,
+    },
+    preparationTime: {
+      type: String,
     },
   },
   {

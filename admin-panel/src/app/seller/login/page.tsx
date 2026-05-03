@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Mail, Lock, ArrowRight, Store, Eye, EyeOff } from "lucide-react";
+import { API_URL } from "@/lib/api";
 
 export default function SellerLogin() {
   const router = useRouter();
@@ -19,7 +20,6 @@ export default function SellerLogin() {
     setErrorMsg("");
 
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
       const res = await fetch(`${API_URL}/api/seller/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
