@@ -27,28 +27,28 @@ const AnimatedCounter = ({ to, suffix = "" }: { to: number, suffix?: string }) =
 
 // ======================= VEG / PREMIUM ITEMS (9 Verified Safe Images) =======================
 const vegItems = [
-  { id: 1, url: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd', size: 'w-64 h-64 md:w-[340px] md:h-[340px]', pos: 'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2', z: 120, delay: 0, isMain: true, label: "GOURMET BURGER" },
-  { id: 2, url: 'https://images.unsplash.com/photo-1513104890138-7c749659a591', size: 'w-32 h-32 md:w-64 md:h-64', pos: 'left-[2%] top-[5%] md:left-[10%] md:top-[10%]', z: 80, delay: 0.5 }, // Pizza
-  { id: 3, url: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd', size: 'w-24 h-24 md:w-56 md:h-56', pos: 'right-[2%] top-[10%] md:right-[10%] md:top-[12%]', z: 90, delay: 1.2 }, // Salad
-  { id: 4, url: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38', size: 'w-28 h-28 md:w-48 md:h-48', pos: 'left-[5%] bottom-[5%] md:left-[12%] md:bottom-[15%]', z: 70, delay: 0.8 }, // Pancakes
-  { id: 5, url: 'https://images.unsplash.com/photo-1551504734-5ee1c4a1479b', size: 'w-32 h-32 md:w-52 md:h-52', pos: 'right-[5%] bottom-[8%] md:right-[15%] md:bottom-[20%]', z: 60, delay: 1.5 }, // Tacos
-  { id: 6, url: 'https://images.unsplash.com/photo-1473093295043-cdd812d0e601', size: 'w-20 h-20 md:w-44 md:h-44', pos: 'left-1/2 top-[2%] -translate-x-1/2 md:top-[5%]', z: 50, delay: 0.3 }, // Pasta
-  { id: 7, url: 'https://images.unsplash.com/photo-1497935586351-b67a49e012bf', size: 'w-20 h-20 md:w-40 md:h-40', pos: 'left-1/2 bottom-[2%] -translate-x-1/2 md:bottom-[5%]', z: 45, delay: 1.8 }, // Coffee
-  { id: 8, url: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587', size: 'w-16 h-16 md:w-36 md:h-36', pos: 'left-[-5%] top-[40%] md:left-[2%] md:top-[45%]', z: 40, delay: 2.1 }, // Cake
-  { id: 9, url: 'https://images.unsplash.com/photo-1497034825429-c343d7c6a68f', size: 'w-16 h-16 md:w-36 md:h-36', pos: 'right-[-5%] top-[50%] md:right-[2%] md:top-[40%]', z: 35, delay: 1.1 }, // Ice Cream
+  { id: 1, url: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd', size: 'w-48 h-48 sm:w-64 sm:h-64 md:w-[340px] md:h-[340px]', pos: 'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2', z: 120, delay: 0, isMain: true, label: "GOURMET BURGER" },
+  { id: 2, url: 'https://images.unsplash.com/photo-1513104890138-7c749659a591', size: 'w-20 h-20 sm:w-32 sm:h-32 md:w-64 md:h-64', pos: 'left-[2%] top-[5%] md:left-[10%] md:top-[10%]', z: 80, delay: 0.5 }, // Pizza
+  { id: 3, url: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd', size: 'w-16 h-16 sm:w-24 sm:h-24 md:w-56 md:h-56', pos: 'right-[2%] top-[10%] md:right-[10%] md:top-[12%]', z: 90, delay: 1.2 }, // Salad
+  { id: 4, url: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38', size: 'w-16 h-16 sm:w-28 sm:h-28 md:w-48 md:h-48', pos: 'left-[5%] bottom-[5%] md:left-[12%] md:bottom-[15%]', z: 70, delay: 0.8 }, // Pancakes
+  { id: 5, url: 'https://images.unsplash.com/photo-1551504734-5ee1c4a1479b', size: 'w-20 h-20 sm:w-32 sm:h-32 md:w-52 md:h-52', pos: 'right-[5%] bottom-[8%] md:right-[15%] md:bottom-[20%]', z: 60, delay: 1.5 }, // Tacos
+  { id: 6, url: 'https://images.unsplash.com/photo-1473093295043-cdd812d0e601', size: 'w-12 h-12 sm:w-20 sm:h-20 md:w-44 md:h-44', pos: 'left-1/2 top-[2%] -translate-x-1/2 md:top-[5%]', z: 50, delay: 0.3 }, // Pasta
+  { id: 7, url: 'https://images.unsplash.com/photo-1497935586351-b67a49e012bf', size: 'w-12 h-12 sm:w-20 sm:h-20 md:w-40 md:h-40', pos: 'left-1/2 bottom-[2%] -translate-x-1/2 md:bottom-[5%]', z: 45, delay: 1.8 }, // Coffee
+  { id: 8, url: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587', size: 'w-10 h-10 sm:w-16 sm:h-16 md:w-36 md:h-36', pos: 'left-[-5%] top-[40%] md:left-[2%] md:top-[45%]', z: 40, delay: 2.1 }, // Cake
+  { id: 9, url: 'https://images.unsplash.com/photo-1497034825429-c343d7c6a68f', size: 'w-10 h-10 sm:w-16 sm:h-16 md:w-36 md:h-36', pos: 'right-[-5%] top-[50%] md:right-[2%] md:top-[40%]', z: 35, delay: 1.1 }, // Ice Cream
 ];
 
 // ======================= NON-VEG / MEAT ITEMS (9 Verified Safe Images) =======================
 const nonVegItems = [
-  { id: 1, url: 'https://images.unsplash.com/photo-1600891964092-4316c288032e', size: 'w-64 h-64 md:w-[340px] md:h-[340px]', pos: 'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2', z: 120, delay: 0, isMain: true, label: "PREMIUM STEAK" },
-  { id: 2, url: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1', size: 'w-32 h-32 md:w-64 md:h-64', pos: 'left-[2%] top-[5%] md:left-[10%] md:top-[10%]', z: 80, delay: 0.5 }, // Ribs
-  { id: 3, url: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c', size: 'w-24 h-24 md:w-56 md:h-56', pos: 'right-[2%] top-[10%] md:right-[10%] md:top-[12%]', z: 90, delay: 1.2 }, // Meat Plate
-  { id: 4, url: 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d', size: 'w-28 h-28 md:w-48 md:h-48', pos: 'left-[5%] bottom-[5%] md:left-[12%] md:bottom-[15%]', z: 70, delay: 0.8 }, // Fried Chicken
-  { id: 5, url: 'https://images.unsplash.com/photo-1524114664604-cd8133cd67ad', size: 'w-32 h-32 md:w-52 md:h-52', pos: 'right-[5%] bottom-[8%] md:right-[15%] md:bottom-[20%]', z: 60, delay: 1.5 }, // Wings
-  { id: 6, url: 'https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba', size: 'w-20 h-20 md:w-44 md:h-44', pos: 'left-1/2 top-[2%] -translate-x-1/2 md:top-[5%]', z: 50, delay: 0.3 }, // BBQ
-  { id: 7, url: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd', size: 'w-20 h-20 md:w-40 md:h-40', pos: 'left-1/2 bottom-[2%] -translate-x-1/2 md:bottom-[5%]', z: 45, delay: 1.8 }, // Burger
-  { id: 8, url: 'https://images.unsplash.com/photo-1513104890138-7c749659a591', size: 'w-16 h-16 md:w-36 md:h-36', pos: 'left-[-5%] top-[40%] md:left-[2%] md:top-[45%]', z: 40, delay: 2.1 }, // Pizza
-  { id: 9, url: 'https://images.unsplash.com/photo-1598514982205-f36b96d1e8d4', size: 'w-16 h-16 md:w-36 md:h-36', pos: 'right-[-5%] top-[50%] md:right-[2%] md:top-[40%]', z: 35, delay: 1.1 }, // Kabab
+  { id: 1, url: 'https://images.unsplash.com/photo-1600891964092-4316c288032e', size: 'w-48 h-48 sm:w-64 sm:h-64 md:w-[340px] md:h-[340px]', pos: 'left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2', z: 120, delay: 0, isMain: true, label: "PREMIUM STEAK" },
+  { id: 2, url: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1', size: 'w-20 h-20 sm:w-32 sm:h-32 md:w-64 md:h-64', pos: 'left-[2%] top-[5%] md:left-[10%] md:top-[10%]', z: 80, delay: 0.5 }, // Ribs
+  { id: 3, url: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c', size: 'w-16 h-16 sm:w-24 sm:h-24 md:w-56 md:h-56', pos: 'right-[2%] top-[10%] md:right-[10%] md:top-[12%]', z: 90, delay: 1.2 }, // Meat Plate
+  { id: 4, url: 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d', size: 'w-16 h-16 sm:w-28 sm:h-28 md:w-48 md:h-48', pos: 'left-[5%] bottom-[5%] md:left-[12%] md:bottom-[15%]', z: 70, delay: 0.8 }, // Fried Chicken
+  { id: 5, url: 'https://images.unsplash.com/photo-1524114664604-cd8133cd67ad', size: 'w-20 h-20 sm:w-32 sm:h-32 md:w-52 md:h-52', pos: 'right-[5%] bottom-[8%] md:right-[15%] md:bottom-[20%]', z: 60, delay: 1.5 }, // Wings
+  { id: 6, url: 'https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba', size: 'w-12 h-12 sm:w-20 sm:h-20 md:w-44 md:h-44', pos: 'left-1/2 top-[2%] -translate-x-1/2 md:top-[5%]', z: 50, delay: 0.3 }, // BBQ
+  { id: 7, url: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd', size: 'w-12 h-12 sm:w-20 sm:h-20 md:w-40 md:h-40', pos: 'left-1/2 bottom-[2%] -translate-x-1/2 md:bottom-[5%]', z: 45, delay: 1.8 }, // Burger
+  { id: 8, url: 'https://images.unsplash.com/photo-1513104890138-7c749659a591', size: 'w-10 h-10 sm:w-16 sm:h-16 md:w-36 md:h-36', pos: 'left-[-5%] top-[40%] md:left-[2%] md:top-[45%]', z: 40, delay: 2.1 }, // Pizza
+  { id: 9, url: 'https://images.unsplash.com/photo-1598514982205-f36b96d1e8d4', size: 'w-10 h-10 sm:w-16 sm:h-16 md:w-36 md:h-36', pos: 'right-[-5%] top-[50%] md:right-[2%] md:top-[40%]', z: 35, delay: 1.1 }, // Kabab
 ];
 
 // ======================= ANIMATED PREMIUM BACKGROUNDS =======================
@@ -193,8 +193,8 @@ export default function UnifiedMainWebsite() {
       {/* ================= TOP NAVIGATION BAR ================= */}
       <nav className="fixed top-0 w-full z-50 flex items-center justify-between p-4 md:px-12 border-b border-white/10 bg-black/40 backdrop-blur-xl shadow-2xl">
         <div className="flex items-center gap-3 cursor-pointer">
-           <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.4)]">
-             <ChefHat className="text-white w-6 h-6 md:w-7 md:h-7" />
+           <div className="flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-zinc-700 to-black border border-white/30 shadow-[0_0_15px_rgba(255,255,255,0.3)] relative z-10">
+             <span className="text-white font-black text-lg md:text-xl tracking-tighter drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]">SM</span>
            </div>
            <span className="text-xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 tracking-tight">Samrat Market</span>
         </div>
@@ -219,7 +219,7 @@ export default function UnifiedMainWebsite() {
       </nav>
 
       {/* ================= SECTION 1: VEG PREMIUM MARKET ================= */}
-      <section className="relative min-h-screen pt-32 pb-24 flex flex-col items-center">
+      <section className="relative min-h-screen pt-32 pb-24 flex flex-col items-center overflow-hidden">
         <PremiumBackground type="veg" />
 
         <motion.div initial={{ opacity: 1, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: "easeOut" }} className="relative z-10 text-center max-w-5xl mx-auto space-y-6 px-4">
@@ -238,7 +238,7 @@ export default function UnifiedMainWebsite() {
       </section>
 
       {/* ================= SECTION 2: NON-VEG MEAT MARKET ================= */}
-      <section className="relative min-h-screen py-32 flex flex-col items-center">
+      <section className="relative min-h-screen py-32 flex flex-col items-center overflow-hidden">
         <PremiumBackground type="nonveg" />
 
         <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-100px" }} transition={{ duration: 0.8, ease: "easeOut" }} className="relative z-10 text-center max-w-5xl mx-auto space-y-6 px-4">
