@@ -22,6 +22,12 @@ const sellerSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Shop',
     },
+    resetOtp: {
+      type: String,
+    },
+    resetOtpExpires: {
+      type: Date,
+    },
     status: {
       type: String,
       enum: ['pending', 'active', 'blocked'],

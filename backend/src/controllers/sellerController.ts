@@ -919,3 +919,84 @@ export const removeShopBanner = async (req: SellerRequest, res: Response): Promi
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
+
+export const forgotPassword = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      res.status(400).json({ message: 'Please provide an email' });
+      return;
+    }
+
+    const seller = await Seller.findOne({ email });
+    if (!seller) {
+      res.status(404).json({ message: 'No seller found with this email' });
+      return;
+    }
+
+    // Generate 6-digit Mock OTP
+    const mockOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Set expiry to 10 minutes from now
+    const expires = new Date();
+    expires.setMinutes(expires.getMinutes() + 10);
+
+    seller.set('resetOtp', mockOtp);
+    seller.set('resetOtpExpires', expires);
+    await seller.save();
+
+    // In a real scenario, you would send this OTP via email here using Nodemailer
+    res.status(200).json({ 
+      message: 'OTP sent to email successfully', 
+      mockOtp // Mocking the email sending by returning it in the response
+    });
+  } catch (error) {
+    console.error('Error in forgotPassword:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
+export const resetPassword = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email, otp, newPassword } = req.body;
+    
+    if (!email || !otp || !newPassword) {
+      res.status(400).json({ message: 'Please provide email, OTP, and new password' });
+      return;
+    }
+
+    const seller = await Seller.findOne({ email });
+    if (!seller) {
+      res.status(404).json({ message: 'No seller found with this email' });
+      return;
+    }
+
+    const resetOtp = seller.get('resetOtp');
+    const resetOtpExpires = seller.get('resetOtpExpires');
+
+    if (!resetOtp || resetOtp !== otp) {
+      res.status(400).json({ message: 'Invalid OTP' });
+      return;
+    }
+
+    if (!resetOtpExpires || resetOtpExpires < new Date()) {
+      res.status(400).json({ message: 'OTP has expired' });
+      return;
+    }
+
+    // Hash the new password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    // Update password and clear OTP
+    seller.password = hashedPassword;
+    seller.set('resetOtp', undefined);
+    seller.set('resetOtpExpires', undefined);
+    await seller.save();
+
+    res.status(200).json({ message: 'Password reset successfully. You can now login.' });
+  } catch (error) {
+    console.error('Error in resetPassword:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};

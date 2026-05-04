@@ -1,5 +1,5 @@
 import express from 'express';
-import { registerSeller, clearTestData, loginSeller, uploadAIMenu, getSellerMenu, uploadAIImageMenu, deleteProduct, updateProduct, bulkDeleteProducts, toggleProductAvailability, updateShopSettings, getShopSettings, getSellerOrders, updateOrderStatus, getDashboardAnalytics, updateProductImage, removeProductImage, addProduct, generateItemDescription, updateShopLogo, updateShopBanner, removeShopBanner } from '../controllers/sellerController';
+import { registerSeller, clearTestData, loginSeller, forgotPassword, resetPassword, uploadAIMenu, getSellerMenu, uploadAIImageMenu, deleteProduct, updateProduct, bulkDeleteProducts, toggleProductAvailability, updateShopSettings, getShopSettings, getSellerOrders, updateOrderStatus, getDashboardAnalytics, updateProductImage, removeProductImage, addProduct, generateItemDescription, updateShopLogo, updateShopBanner, removeShopBanner } from '../controllers/sellerController';
 import { protectSeller } from '../middlewares/authMiddleware';
 import multer from 'multer';
 
@@ -12,6 +12,10 @@ router.post('/register', registerSeller);
 
 // Public route for seller login
 router.post('/login', loginSeller);
+
+// Password Reset Routes
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password', resetPassword);
 
 // Temporary route to clear test data easily
 router.get('/clear-test-data', clearTestData);
