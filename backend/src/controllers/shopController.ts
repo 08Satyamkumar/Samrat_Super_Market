@@ -138,8 +138,11 @@ export const getPublicShop = async (req: Request, res: Response) => {
     if (identifier.match(/^[0-9a-fA-F]{24}$/)) {
       shop = await Shop.findById(identifier).populate('owner_id', 'name phone email');
     } else {
-      // Find by name, case insensitive
-      shop = await Shop.findOne({ name: { $regex: new RegExp(`^${identifier.replace(/-/g, ' ')}$`, 'i') } }).populate('owner_id', 'name phone email');
+      // Find by name, case insensitive, and MUST be active
+      shop = await Shop.findOne({ 
+        name: { $regex: new RegExp(`^${identifier.replace(/-/g, ' ')}$`, 'i') },
+        status: 'active'
+      }).populate('owner_id', 'name phone email');
     }
 
     if (!shop || shop.status !== 'active') {
