@@ -624,18 +624,18 @@ export default function UserHomePage() {
                       <p className="text-sm text-zinc-500 line-clamp-2 leading-relaxed mb-6 font-medium">{product.description || 'Delicious and fresh ingredients.'}</p>
                       
                       {/* Bottom Row: Price & Actions */}
-                      <div className="mt-auto flex items-end justify-between border-t border-zinc-50 pt-5">
-                        <div>
-                          <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1">Price</span>
-                          <span className="text-3xl font-black tracking-tighter" style={getTextGradientStyle(shop.themeColors || [shop.themeColor])}>₹{product.price}</span>
+                      <div className="mt-auto flex items-end justify-between border-t border-zinc-50 pt-4">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-0.5">Price</span>
+                          <span className="text-xl font-black drop-shadow-sm" style={getTextGradientStyle(shop.themeColors || [shop.themeColor])}>₹{product.price}</span>
                         </div>
 
                         <div className="flex items-center gap-2">
                           {cartItem ? (
-                            <div className="h-[48px] flex items-center justify-between rounded-2xl p-1 bg-zinc-50 border border-zinc-200 shadow-inner min-w-[120px]">
-                              <button onClick={() => updateQuantity(product._id, -1)} className="w-10 h-10 flex items-center justify-center rounded-xl bg-white text-zinc-900 shadow-sm font-bold text-lg hover:bg-zinc-100 transition-colors">-</button>
-                              <span className="font-black text-base w-8 text-center text-zinc-900">{cartItem.quantity}</span>
-                              <button onClick={() => updateQuantity(product._id, 1)} className="w-10 h-10 flex items-center justify-center rounded-xl text-white shadow-md font-bold text-lg hover:brightness-110 transition-all" style={getGradientStyle(shop.themeColors || [shop.themeColor])}>+</button>
+                            <div className="h-9 flex items-center justify-between rounded-xl p-1 bg-zinc-50 border border-zinc-200 shadow-inner">
+                              <button onClick={() => updateQuantity(product._id, -1)} className="w-7 h-7 flex items-center justify-center rounded-lg bg-white text-zinc-900 shadow-sm font-bold">-</button>
+                              <span className="font-black text-sm w-8 text-center text-zinc-900">{cartItem.quantity}</span>
+                              <button onClick={() => updateQuantity(product._id, 1)} className="w-7 h-7 flex items-center justify-center rounded-lg text-white shadow-sm font-bold" style={getGradientStyle(shop.themeColors || [shop.themeColor])}>+</button>
                             </div>
                           ) : (
                             <button 
@@ -644,7 +644,7 @@ export default function UserHomePage() {
                                 if (!userToken && !localStorage.getItem("userToken")) setIsLoginModalOpen(true);
                                 else setIsCheckoutOpen(true); 
                               }}
-                              className="h-[48px] px-8 flex items-center justify-center rounded-2xl text-white font-black uppercase tracking-widest text-[11px] transition-all hover:-translate-y-0.5 hover:shadow-lg shadow-md group-hover:shadow-xl"
+                              className="h-9 px-6 flex items-center justify-center rounded-xl text-white font-black uppercase tracking-widest text-[10px] transition-all hover:opacity-90 active:scale-95 shadow-md hover:shadow-lg"
                               style={getGradientStyle(shop.themeColors || [shop.themeColor])}
                             >
                               Order Now

@@ -410,40 +410,40 @@ export default function PublicShopPage() {
                   </p>
                   
                   {/* Bottom Row: Price & Actions */}
-                  <div className="mt-auto flex items-end justify-between">
-                    <div>
-                      <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest block mb-1">Price</span>
-                      <span className="text-2xl font-black drop-shadow-sm" style={getTextGradient()}>₹{item.price}</span>
+                  <div className="mt-auto flex items-end justify-between border-t border-zinc-100 pt-4">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-0.5">Price</span>
+                      <span className="text-xl font-black drop-shadow-sm" style={getTextGradient()}>₹{item.price}</span>
                     </div>
 
                     <div className="flex items-center gap-2">
                       {shopInfo?.isOpen === false || item.isAvailable === false ? (
-                         <button disabled className="px-6 py-2.5 rounded-xl bg-zinc-100 text-zinc-400 text-xs font-bold uppercase tracking-widest cursor-not-allowed">
+                         <button disabled className="h-9 px-4 rounded-xl bg-zinc-100 text-zinc-400 text-[10px] font-black uppercase tracking-widest cursor-not-allowed">
                            {shopInfo?.isOpen === false ? 'Closed' : 'Sold Out'}
                          </button>
                       ) : getCartQuantity(item._id) > 0 ? (
-                        <div className="h-12 flex items-center justify-between rounded-2xl p-1 bg-zinc-50 border border-zinc-200">
-                          <button onClick={() => removeFromCart(item._id)} className="w-10 h-10 flex items-center justify-center rounded-xl bg-white text-zinc-900 shadow-sm font-bold">-</button>
+                        <div className="h-9 flex items-center justify-between rounded-xl p-1 bg-zinc-50 border border-zinc-200 shadow-inner">
+                          <button onClick={() => removeFromCart(item._id)} className="w-7 h-7 flex items-center justify-center rounded-lg bg-white text-zinc-900 shadow-sm font-bold">-</button>
                           <span className="font-black text-sm w-8 text-center text-zinc-900">{getCartQuantity(item._id)}</span>
-                          <button onClick={() => addToCart(item)} className="w-10 h-10 flex items-center justify-center rounded-xl text-white shadow-sm font-bold" style={getGradientStyle()}>+</button>
+                          <button onClick={() => addToCart(item)} className="w-7 h-7 flex items-center justify-center rounded-lg text-white shadow-sm font-bold" style={getGradientStyle()}>+</button>
                         </div>
                       ) : (
-                        <>
+                        <div className="flex items-center gap-1.5">
                           <button 
                             onClick={() => { if (getCartQuantity(item._id) === 0) addToCart(item); setIsCheckoutOpen(true); }}
-                            className="h-12 px-6 flex items-center justify-center rounded-2xl text-white font-black uppercase tracking-widest text-xs transition-all active:scale-95 shadow-md hover:shadow-lg"
+                            className="h-9 px-5 flex items-center justify-center rounded-xl text-white font-black uppercase tracking-widest text-[10px] transition-all hover:opacity-90 active:scale-95 shadow-md hover:shadow-lg"
                             style={getGradientStyle()}
                           >
-                            Order Now
+                            Order
                           </button>
                           <button 
                             onClick={() => addToCart(item)}
-                            className="w-12 h-12 shrink-0 flex items-center justify-center rounded-2xl bg-zinc-100 text-zinc-600 hover:bg-zinc-200 transition-all active:scale-95"
+                            className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl bg-zinc-100 text-zinc-600 hover:bg-zinc-200 hover:text-zinc-900 transition-all active:scale-95 border border-zinc-200/50"
                             title="Add to Cart"
                           >
-                            <Plus className="w-5 h-5" />
+                            <Plus className="w-4 h-4" />
                           </button>
-                        </>
+                        </div>
                       )}
                     </div>
                   </div>
