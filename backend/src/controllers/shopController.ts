@@ -46,19 +46,66 @@ export const updateShopStatus = async (req: Request, res: Response) => {
 // @access  Public
 export const getAllPublicProducts = async (req: Request, res: Response): Promise<void> => {
   try {
-    const products = await Product.find({ isAvailable: true }).populate({
+    const { lat, lng, type } = req.query;
+
+    let validShopIds = null;
+    let shopDistanceMap: Record<string, number> = {};
+
+    // If location is provided, find nearby shops
+    if (lat && lng) {
+      const radiusInMeters = 15000; // 15 km max radius
+      const geoNearQuery: any[] = [
+        {
+          $geoNear: {
+            near: { type: 'Point', coordinates: [parseFloat(lng as string), parseFloat(lat as string)] },
+            distanceField: 'distance',
+            maxDistance: radiusInMeters,
+            spherical: true,
+            query: { status: 'active' } // only active shops
+          }
+        }
+      ];
+
+      if (type && type !== 'all' && type !== 'near_me') {
+        geoNearQuery[0].$geoNear.query.shopType = type;
+      }
+
+      const nearbyShops = await Shop.aggregate(geoNearQuery);
+      validShopIds = nearbyShops.map(s => s._id);
+      
+      nearbyShops.forEach(s => {
+        shopDistanceMap[s._id.toString()] = s.distance; // stored in meters
+      });
+    } else if (type && type !== 'all' && type !== 'near_me') {
+      const filteredShops = await Shop.find({ status: 'active', shopType: type as string }).select('_id');
+      validShopIds = filteredShops.map(s => s._id);
+    }
+
+    let productQuery: any = { isAvailable: true };
+    if (validShopIds !== null) {
+      productQuery.shop_id = { $in: validShopIds };
+    }
+
+    const products = await Product.find(productQuery).populate({
       path: 'shop_id',
       match: { status: 'active' },
-      select: 'name logo themeColor themeColors shopSlug estimatedDeliveryTime'
+      select: 'name logo themeColor themeColors shopSlug estimatedDeliveryTime upiId shopType location allowsDineIn'
     });
 
-    // Filter out products where shop is not active (Mongoose populate match sets it to null)
     const validProducts = products.filter(p => p.shop_id != null);
-    
-    // Optionally shuffle to make the feed look more random/infinite
-    const shuffled = validProducts.sort(() => 0.5 - Math.random());
 
-    res.status(200).json(shuffled);
+    let finalProducts: any[] = validProducts;
+    if (lat && lng) {
+      finalProducts = validProducts.map(p => {
+        const shopIdStr = (p.shop_id as any)._id.toString();
+        const dist = shopDistanceMap[shopIdStr];
+        return { ...p.toObject(), shopDistance: dist };
+      }).sort((a: any, b: any) => (a.shopDistance || 0) - (b.shopDistance || 0));
+    } else {
+      finalProducts = validProducts.map(p => p.toObject()).sort(() => 0.5 - Math.random());
+    }
+
+    res.status(200).json(finalProducts);
   } catch (error) {
     console.error('Error fetching public products:', error);
     res.status(500).json({ message: 'Internal Server Error' });
@@ -125,7 +172,7 @@ export const getPublicShopProducts = async (req: Request, res: Response) => {
 export const createPublicOrder = async (req: Request, res: Response) => {
   try {
     const { shopId } = req.params;
-    const { customerName, customerPhone, orderItems, total_amount, paymentMethod, userId } = req.body;
+    const { customerName, customerPhone, orderItems, total_amount, paymentMethod, userId, orderType } = req.body;
 
     if (!orderItems || orderItems.length === 0) {
       return res.status(400).json({ message: 'No order items' });
@@ -140,7 +187,8 @@ export const createPublicOrder = async (req: Request, res: Response) => {
       total_amount,
       paymentMethod,
       isPaid: false, // Default unpaid for 'Pay at Shop/QR'
-      status: 'pending'
+      status: 'pending',
+      orderType: orderType || 'delivery'
     });
 
     const createdOrder = await order.save();

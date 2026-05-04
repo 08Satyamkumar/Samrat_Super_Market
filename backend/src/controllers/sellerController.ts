@@ -517,7 +517,7 @@ export const getShopSettings = async (req: SellerRequest, res: Response): Promis
       return;
     }
     const shopId = req.seller.shop_id;
-    const shop = await Shop.findById(shopId).select('isOpen openingTime closingTime estimatedDeliveryTime upiId qrCodeImage logo bannerImage tagline themeColor themeColors');
+    const shop = await Shop.findById(shopId).select('isOpen openingTime closingTime estimatedDeliveryTime upiId qrCodeImage logo bannerImage tagline themeColor themeColors shopType allowsDineIn location');
 
     if (!shop) {
       res.status(404).json({ message: 'Shop not found' });
@@ -538,11 +538,22 @@ export const updateShopSettings = async (req: SellerRequest, res: Response): Pro
       return;
     }
     const shopId = req.seller.shop_id;
-    const { isOpen, openingTime, closingTime, estimatedDeliveryTime, upiId, qrCodeImage, themeColor, themeColors, tagline } = req.body;
+    const { isOpen, openingTime, closingTime, estimatedDeliveryTime, upiId, qrCodeImage, themeColor, themeColors, tagline, shopType, allowsDineIn, location } = req.body;
+
+    const updateData: any = { isOpen, openingTime, closingTime, estimatedDeliveryTime, upiId, qrCodeImage, themeColor, themeColors, tagline };
+    
+    if (shopType) updateData.shopType = shopType;
+    if (allowsDineIn !== undefined) updateData.allowsDineIn = allowsDineIn;
+    if (location && location.coordinates && location.coordinates.length === 2) {
+      updateData.location = {
+        type: 'Point',
+        coordinates: location.coordinates
+      };
+    }
 
     const shop = await Shop.findByIdAndUpdate(
       shopId,
-      { isOpen, openingTime, closingTime, estimatedDeliveryTime, upiId, qrCodeImage, themeColor, themeColors, tagline },
+      updateData,
       { new: true }
     );
 

@@ -2,28 +2,70 @@ import { Request, Response } from 'express';
 import User from '../models/User';
 import generateToken from '../utils/generateToken';
 
-// @desc    Login or register user via phone
-// @route   POST /api/users/login
+// @desc    Send Mock OTP to user
+// @route   POST /api/users/send-otp
 // @access  Public
-export const loginUser = async (req: Request, res: Response): Promise<void> => {
+export const sendOtp = async (req: Request, res: Response): Promise<void> => {
   try {
     const { name, phone } = req.body;
 
-    if (!name || !phone) {
-      res.status(400).json({ message: 'Name and phone are required' });
+    if (!phone) {
+      res.status(400).json({ message: 'Phone number is required' });
       return;
     }
 
-    // Check if user exists
     let user = await User.findOne({ phone });
 
-    // If not, create a new user
     if (!user) {
-      user = await User.create({
-        name,
-        phone,
-      });
+      if (!name) {
+        res.status(400).json({ message: 'Name is required for new users' });
+        return;
+      }
+      user = await User.create({ name, phone });
     }
+
+    // Generate a 6-digit mock OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    user.otp = otp;
+    user.otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
+    await user.save();
+
+    // In a real app, you would send the SMS here.
+    // For Mock, we return it in the response so the frontend can display it.
+    res.status(200).json({
+      message: 'OTP sent successfully',
+      mockOtp: otp // REMOVE THIS IN PRODUCTION WHEN USING REAL SMS
+    });
+  } catch (error) {
+    console.error('Error in sendOtp:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
+// @desc    Verify OTP and login
+// @route   POST /api/users/verify-otp
+// @access  Public
+export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { phone, otp } = req.body;
+
+    if (!phone || !otp) {
+      res.status(400).json({ message: 'Phone and OTP are required' });
+      return;
+    }
+
+    const user = await User.findOne({ phone });
+
+    if (!user || user.otp !== otp || !user.otpExpires || user.otpExpires < new Date()) {
+      res.status(401).json({ message: 'Invalid or expired OTP' });
+      return;
+    }
+
+    // Clear OTP after successful login
+    user.otp = undefined;
+    user.otpExpires = undefined;
+    await user.save();
 
     const token = generateToken(user._id.toString(), 'user');
 
@@ -37,7 +79,7 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
       },
     });
   } catch (error) {
-    console.error('Error in loginUser:', error);
+    console.error('Error in verifyOtp:', error);
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };

@@ -191,7 +191,7 @@ export default function MenuPage() {
       const data = await res.json();
       if (res.ok) {
         toast.success("Item added successfully! 🎉");
-        setProducts(prev => [data.product, ...prev]);
+        fetchProducts(); // Refetch to get the fully populated shop_id (with name and logo)
         setShowManualAddModal(false);
         setManualItem({ name: "", price: "", category: "general", description: "" });
       } else {

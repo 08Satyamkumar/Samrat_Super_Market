@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Store, Palette, Upload, Loader2, Check, QrCode, Clock, CreditCard, Bell, Info, ShoppingCart, Plus, Trash2 } from "lucide-react";
+import { Store, Palette, Upload, Loader2, Check, QrCode, Clock, CreditCard, Bell, Info, ShoppingCart, Plus, Trash2, MapPin, Utensils } from "lucide-react";
 import { toast } from "sonner";
 import { API_URL } from "@/lib/api";
 
@@ -22,6 +22,10 @@ export default function SettingsPage() {
   const [openingTime, setOpeningTime] = useState("10:00");
   const [closingTime, setClosingTime] = useState("22:00");
   const [estimatedDeliveryTime, setEstimatedDeliveryTime] = useState("30-45 mins");
+  const [shopType, setShopType] = useState('restaurant');
+  const [allowsDineIn, setAllowsDineIn] = useState(false);
+  const [location, setLocation] = useState<{coordinates: number[]}>({ coordinates: [0, 0] });
+  const [isFetchingLocation, setIsFetchingLocation] = useState(false);
   
   // Payment
   const [upiId, setUpiId] = useState("");
@@ -94,6 +98,9 @@ export default function SettingsPage() {
           setClosingTime(data.shop.closingTime || "22:00");
           setEstimatedDeliveryTime(data.shop.estimatedDeliveryTime || "30-45 mins");
           setUpiId(data.shop.upiId || "");
+          if (data.shop.shopType) setShopType(data.shop.shopType);
+          if (data.shop.allowsDineIn !== undefined) setAllowsDineIn(data.shop.allowsDineIn);
+          if (data.shop.location) setLocation(data.shop.location);
         }
       }
     } catch (error) {
@@ -102,6 +109,29 @@ export default function SettingsPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleFetchLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation is not supported by your browser");
+      return;
+    }
+    
+    setIsFetchingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocation({
+          coordinates: [position.coords.longitude, position.coords.latitude]
+        });
+        setIsFetchingLocation(false);
+        toast.success("Location fetched successfully! 📍");
+      },
+      (error) => {
+        console.error(error);
+        setIsFetchingLocation(false);
+        toast.error("Failed to get location. Please allow location permissions.");
+      }
+    );
   };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -208,7 +238,10 @@ export default function SettingsPage() {
           closingTime, 
           estimatedDeliveryTime, 
           upiId,
-          tagline
+          tagline,
+          shopType,
+          allowsDineIn,
+          location
         })
       });
       if (res.ok) {
@@ -524,7 +557,76 @@ export default function SettingsPage() {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-border">
+                  <div>
+                    <h3 className="text-lg font-bold flex items-center gap-2 mb-4">
+                      <Utensils className="w-4 h-4 text-rose-500" /> Category & Services
+                    </h3>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-bold mb-2">Shop Type</label>
+                        <select 
+                          value={shopType}
+                          onChange={(e) => setShopType(e.target.value)}
+                          className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-violet-500/50 outline-none"
+                        >
+                          <option value="restaurant">Restaurant</option>
+                          <option value="hotel">Hotel</option>
+                          <option value="mess">Mess</option>
+                          <option value="cafe">Cafe</option>
+                          <option value="streetfood">Street Food</option>
+                        </select>
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 bg-muted/30 rounded-xl border border-border">
+                        <div>
+                          <h4 className="font-bold text-sm">Dine-In Available?</h4>
+                          <p className="text-xs text-muted-foreground mt-0.5">Can users eat at your shop?</p>
+                        </div>
+                        <button 
+                          onClick={() => setAllowsDineIn(!allowsDineIn)}
+                          className={`relative w-12 h-6 rounded-full transition-colors duration-300 shadow-inner flex items-center px-1 ${allowsDineIn ? 'bg-violet-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+                        >
+                          <span className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform duration-300 ${allowsDineIn ? 'translate-x-6' : 'translate-x-0'}`} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-bold flex items-center gap-2 mb-4">
+                      <MapPin className="w-4 h-4 text-blue-500" /> Shop Exact Location
+                    </h3>
+                    
+                    <div className="p-5 bg-blue-500/5 border border-blue-500/20 rounded-xl text-center">
+                      <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <MapPin className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <h4 className="font-bold mb-1">Set Your Location</h4>
+                      <p className="text-xs text-muted-foreground mb-4">
+                        Users nearby will see your shop first. Click to auto-fetch your GPS location.
+                      </p>
+                      
+                      <button
+                        onClick={handleFetchLocation}
+                        disabled={isFetchingLocation}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                      >
+                        {isFetchingLocation ? <Loader2 className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" />}
+                        {isFetchingLocation ? "Fetching GPS..." : "Fetch My Location"}
+                      </button>
+
+                      {location.coordinates[0] !== 0 && (
+                        <div className="mt-3 p-2 bg-background border border-border rounded text-xs font-mono text-muted-foreground">
+                          Lon: {location.coordinates[0].toFixed(4)}, Lat: {location.coordinates[1].toFixed(4)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-border">
                   <div>
                     <label className="block text-sm font-bold mb-2">Opening Time</label>
                     <input 

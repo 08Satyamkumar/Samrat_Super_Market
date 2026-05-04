@@ -78,6 +78,26 @@ const shopSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    shopType: {
+      type: String,
+      enum: ['restaurant', 'mess', 'hotel', 'cafe', 'streetfood', 'other'],
+      default: 'restaurant',
+    },
+    allowsDineIn: {
+      type: Boolean,
+      default: false,
+    },
+    location: {
+      type: {
+        type: String,
+        enum: ['Point'],
+        default: 'Point',
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+        default: [0, 0],
+      },
+    },
   },
   {
     timestamps: true,
@@ -89,6 +109,9 @@ shopSchema.index(
   { createdAt: 1 },
   { expireAfterSeconds: 86400, partialFilterExpression: { status: 'pending' } }
 );
+
+// GeoSpatial index for location-based search
+shopSchema.index({ location: '2dsphere' });
 
 const Shop = mongoose.model('Shop', shopSchema);
 export default Shop;

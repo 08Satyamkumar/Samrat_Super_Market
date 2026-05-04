@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, Package, Clock, MapPin, ChevronLeft, LogOut, CheckCircle2, ChevronRight, Utensils, X, Loader2 } from "lucide-react";
+import { User, Package, Clock, MapPin, ChevronLeft, LogOut, CheckCircle2, ChevronRight, Utensils, X, Loader2, ShoppingBag, Flame, PackageOpen, Bike } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -22,12 +22,45 @@ export default function UserProfilePage() {
   // Auth State (If not logged in)
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [otpStep, setOtpStep] = useState(false);
+  const [otpInput, setOtpInput] = useState("");
   const [inputName, setInputName] = useState("");
   const [inputPhone, setInputPhone] = useState("");
+
+  const [activeOrders, setActiveOrders] = useState<any[]>([]);
 
   useEffect(() => {
     setMounted(true);
     checkAuthAndFetchData();
+
+    // Polling for live updates
+    const interval = setInterval(() => {
+      const token = localStorage.getItem("userToken");
+      if (token) {
+        fetch(`${API_URL}/api/users/orders`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (data) {
+            setOrders(data);
+            const active = data.filter((o: any) => {
+              if (['cancelled'].includes(o.status)) return false;
+              if (o.status === 'delivered') {
+                 const updatedTime = new Date(o.updatedAt).getTime();
+                 const now = new Date().getTime();
+                 return (now - updatedTime) < 20000;
+              }
+              return true;
+            });
+            setActiveOrders(active);
+          }
+        })
+        .catch(err => console.error(err));
+      }
+    }, 10000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const checkAuthAndFetchData = async () => {
@@ -55,6 +88,16 @@ export default function UserProfilePage() {
       if (res.ok) {
         const data = await res.json();
         setOrders(data);
+        const active = data.filter((o: any) => {
+          if (['cancelled'].includes(o.status)) return false;
+          if (o.status === 'delivered') {
+             const updatedTime = new Date(o.updatedAt).getTime();
+             const now = new Date().getTime();
+             return (now - updatedTime) < 20000;
+          }
+          return true;
+        });
+        setActiveOrders(active);
       } else {
         if (res.status === 401) handleLogout();
       }
@@ -65,34 +108,64 @@ export default function UserProfilePage() {
     }
   };
 
-  const handleUserLogin = async () => {
+  const handleSendOtp = async () => {
     if (!inputName || !inputPhone) {
       toast.error("Please enter Name and Phone number");
       return;
     }
     setIsLoggingIn(true);
     try {
-      const res = await fetch(`${API_URL}/api/users/login`, {
+      const res = await fetch(`${API_URL}/api/users/send-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: inputName, phone: inputPhone })
       });
       if (res.ok) {
         const data = await res.json();
+        setOtpStep(true);
+        toast.success(`Mock OTP: ${data.mockOtp}`, { duration: 10000 });
+      } else {
+        toast.error("Failed to send OTP");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Network error");
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otpInput) {
+      toast.error("Please enter OTP");
+      return;
+    }
+    setIsLoggingIn(true);
+    try {
+      const res = await fetch(`${API_URL}/api/users/verify-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: inputPhone, otp: otpInput })
+      });
+      if (res.ok) {
+        const data = await res.json();
         localStorage.setItem("userToken", data.token);
+        localStorage.setItem("userId", data.user._id);
         localStorage.setItem("userName", data.user.name);
         localStorage.setItem("userPhone", data.user.phone);
         setUserToken(data.token);
         setUserName(data.user.name);
         setUserPhone(data.user.phone);
         setIsLoginModalOpen(false);
+        setOtpStep(false);
+        setOtpInput("");
         toast.success(`Welcome, ${data.user.name}!`);
         
         // Fetch orders immediately after login
         setLoading(true);
         checkAuthAndFetchData();
       } else {
-        toast.error("Failed to login");
+        toast.error("Invalid or expired OTP");
       }
     } catch (error) {
       console.error(error);
@@ -230,6 +303,17 @@ export default function UserProfilePage() {
                         </p>
                       </div>
 
+                      {order.preparationTime && isLive && (
+                        <div className="mb-4 bg-orange-500/10 border border-orange-500/20 rounded-xl p-3 flex items-center gap-3">
+                          <div className="bg-white p-1.5 rounded-lg text-orange-500 shadow-sm">
+                            <Clock className="w-4 h-4" />
+                          </div>
+                          <p className="text-sm font-bold text-orange-600">
+                            Ready in {order.preparationTime}
+                          </p>
+                        </div>
+                      )}
+
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest border border-zinc-200 px-3 py-1.5 rounded-full">
                           {order.paymentMethod}
@@ -251,6 +335,105 @@ export default function UserProfilePage() {
 
       </div>
 
+      {/* 🟢 Live Order Tracker Floating Widget */}
+      <AnimatePresence>
+        {activeOrders.length > 0 && (
+          <motion.div 
+            initial={{ y: 150, opacity: 0, scale: 0.9 }} 
+            animate={{ y: 0, opacity: 1, scale: 1 }} 
+            exit={{ y: 150, opacity: 0, scale: 0.9 }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="fixed bottom-6 left-0 right-0 z-50 px-4 md:px-0 flex justify-center pointer-events-none"
+          >
+            {activeOrders.slice(0, 1).map(order => {
+               const steps = ['pending', 'processing', 'ready', 'shipped'];
+               let currentStepIdx = steps.indexOf(order.status);
+               if (currentStepIdx === -1) currentStepIdx = 0;
+               const progress = ((currentStepIdx + 1) / steps.length) * 100;
+               
+               if (order.status === 'delivered') {
+                 return (
+                   <div key={order._id} className="pointer-events-auto w-full md:w-[500px] bg-emerald-500 text-white rounded-[2rem] p-5 shadow-[0_20px_50px_rgba(16,185,129,0.3)] border border-emerald-400 flex flex-col overflow-hidden relative">
+                     <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full blur-3xl" />
+                     <div className="flex items-center justify-between relative z-10">
+                       <div className="flex items-center gap-4">
+                         <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center shadow-inner">
+                           <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+                         </div>
+                         <div>
+                           <h4 className="font-black text-2xl tracking-tight mb-1">Successfully Delivered! 🎉</h4>
+                           <p className="text-sm font-bold text-emerald-50">Hope you enjoy your meal from {order.shop_id?.name}</p>
+                         </div>
+                       </div>
+                     </div>
+                   </div>
+                 )
+               }
+
+               return (
+                 <div key={order._id} className="pointer-events-auto w-full md:w-[500px] bg-zinc-900 text-white rounded-[2rem] p-5 shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-zinc-800 flex flex-col overflow-hidden relative">
+                   <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/10 rounded-full blur-3xl" />
+                   
+                   <div className="flex items-center justify-between mb-4 relative z-10">
+                     <div className="flex items-center gap-3">
+                       <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center border border-white/10">
+                         {order.status === 'pending' ? <ShoppingBag className="w-5 h-5 text-zinc-300" /> : 
+                          order.status === 'processing' ? <Flame className="w-5 h-5 text-orange-400 animate-pulse" /> :
+                          order.status === 'ready' ? <PackageOpen className="w-5 h-5 text-blue-400" /> :
+                          <Bike className="w-5 h-5 text-green-400" />}
+                       </div>
+                       <div>
+                         <h4 className="font-black text-lg flex items-center gap-2">
+                           {order.status === 'pending' ? 'Order Received' : 
+                            order.status === 'processing' ? 'Preparing your food' :
+                            order.status === 'ready' ? 'Ready for Pickup' :
+                            'Out for Delivery'} 
+                           <span className="flex h-2 w-2 relative">
+                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                             <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                           </span>
+                         </h4>
+                         <p className="text-xs font-bold text-zinc-400">{order.shop_id?.name || 'Restaurant'}</p>
+                       </div>
+                     </div>
+                     <div className="text-right">
+                       <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 block mb-1">Items</span>
+                       <span className="font-bold text-sm bg-white/10 px-2.5 py-1 rounded-lg">{order.orderItems?.length || 0}</span>
+                     </div>
+                   </div>
+
+                   {order.status === 'processing' && order.preparationTime && (
+                     <div className="mb-4 bg-white/5 border border-white/10 rounded-xl p-3 flex items-center gap-3 z-10">
+                       <div className="bg-orange-500/20 p-2 rounded-lg text-orange-400">
+                         <Clock className="w-4 h-4" />
+                       </div>
+                       <p className="text-sm font-medium text-zinc-200">
+                         ✨ Your food is being prepared with love. Ready in <span className="font-bold text-white">{order.preparationTime}</span>!
+                       </p>
+                     </div>
+                   )}
+
+                   <div className="relative w-full h-2 bg-white/10 rounded-full overflow-hidden z-10 mb-2">
+                     <motion.div 
+                       initial={{ width: 0 }}
+                       animate={{ width: `${progress}%` }}
+                       transition={{ duration: 1, ease: "easeOut" }}
+                       className={`absolute top-0 left-0 h-full rounded-full ${order.status === 'pending' ? 'bg-zinc-400' : order.status === 'processing' ? 'bg-orange-500' : order.status === 'ready' ? 'bg-blue-500' : 'bg-green-500'}`} 
+                     />
+                   </div>
+                   <div className="flex justify-between text-[10px] font-bold text-zinc-500 uppercase tracking-widest z-10">
+                     <span className={order.status === 'pending' ? 'text-zinc-300' : ''}>Placed</span>
+                     <span className={order.status === 'processing' ? 'text-orange-400' : ''}>Preparing</span>
+                     <span className={order.status === 'ready' ? 'text-blue-400' : ''}>Ready</span>
+                     <span className={order.status === 'shipped' ? 'text-green-400' : ''}>On the way</span>
+                   </div>
+                 </div>
+               )
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Login Modal */}
       <AnimatePresence>
         {isLoginModalOpen && (
@@ -265,23 +448,44 @@ export default function UserProfilePage() {
 
               <p className="text-zinc-500 font-medium mb-6">Please login to view your profile and order history.</p>
 
-              <div className="space-y-4 mb-8">
-                <div>
-                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest ml-2 mb-2 block">Your Name</label>
-                  <input type="text" placeholder="Rahul Kumar" value={inputName} onChange={(e) => setInputName(e.target.value)} className="w-full px-5 py-4 rounded-2xl bg-zinc-50 border border-zinc-200 outline-none focus:border-zinc-400 focus:bg-white transition-all font-bold text-zinc-900 placeholder:text-zinc-400" />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest ml-2 mb-2 block">Phone Number</label>
-                  <input type="tel" placeholder="9876543210" value={inputPhone} onChange={(e) => setInputPhone(e.target.value)} className="w-full px-5 py-4 rounded-2xl bg-zinc-50 border border-zinc-200 outline-none focus:border-zinc-400 focus:bg-white transition-all font-bold text-zinc-900 placeholder:text-zinc-400" />
-                </div>
-              </div>
-
-              <button 
-                onClick={handleUserLogin} disabled={isLoggingIn || !inputName || !inputPhone}
-                className="w-full py-5 rounded-2xl bg-zinc-900 text-white font-black uppercase tracking-widest text-lg hover:shadow-xl hover:-translate-y-1 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
-              >
-                {isLoggingIn ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Login / Signup'}
-              </button>
+              {!otpStep ? (
+                <>
+                  <div className="space-y-4 mb-8">
+                    <div>
+                      <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest ml-2 mb-2 block">Your Name</label>
+                      <input type="text" placeholder="Rahul Kumar" value={inputName} onChange={(e) => setInputName(e.target.value)} className="w-full px-5 py-4 rounded-2xl bg-zinc-50 border border-zinc-200 outline-none focus:border-zinc-400 focus:bg-white transition-all font-bold text-zinc-900 placeholder:text-zinc-400" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest ml-2 mb-2 block">Phone Number</label>
+                      <input type="tel" placeholder="9876543210" value={inputPhone} onChange={(e) => setInputPhone(e.target.value)} className="w-full px-5 py-4 rounded-2xl bg-zinc-50 border border-zinc-200 outline-none focus:border-zinc-400 focus:bg-white transition-all font-bold text-zinc-900 placeholder:text-zinc-400" />
+                    </div>
+                  </div>
+                  <button 
+                    onClick={handleSendOtp} disabled={isLoggingIn || !inputName || !inputPhone}
+                    className="w-full py-5 rounded-2xl bg-zinc-900 text-white font-black uppercase tracking-widest text-lg hover:shadow-xl hover:-translate-y-1 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                  >
+                    {isLoggingIn ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Send OTP'}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="space-y-4 mb-8">
+                    <div>
+                      <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest ml-2 mb-2 block">Enter OTP</label>
+                      <input type="text" placeholder="123456" value={otpInput} onChange={(e) => setOtpInput(e.target.value)} className="w-full px-5 py-4 rounded-2xl bg-zinc-50 border border-zinc-200 outline-none focus:border-zinc-400 focus:bg-white transition-all font-bold text-zinc-900 tracking-[0.5em] text-center text-xl" maxLength={6} />
+                    </div>
+                  </div>
+                  <button 
+                    onClick={handleVerifyOtp} disabled={isLoggingIn || !otpInput || otpInput.length < 6}
+                    className="w-full py-5 rounded-2xl bg-green-600 text-white font-black uppercase tracking-widest text-lg hover:shadow-xl hover:-translate-y-1 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                  >
+                    {isLoggingIn ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Verify & Continue'}
+                  </button>
+                  <button onClick={() => setOtpStep(false)} className="w-full mt-4 text-zinc-500 font-bold text-sm hover:text-zinc-900 transition-colors">
+                    Back to Phone Number
+                  </button>
+                </>
+              )}
             </motion.div>
           </div>
         )}

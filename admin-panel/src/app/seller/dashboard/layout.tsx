@@ -102,7 +102,7 @@ export default function SellerDashboardLayout({
       )}
 
       {/* Sidebar Wrapper */}
-      <div className="relative z-50 hidden md:block">
+      <div className={`fixed inset-y-0 left-0 z-50 md:relative md:translate-x-0 transition-transform duration-300 ease-in-out ${isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <motion.aside
           initial={false}
           animate={{ width: isSidebarOpen ? 280 : 80 }}
@@ -223,7 +223,7 @@ export default function SellerDashboardLayout({
         {/* Desktop Collapse Toggle (Moved outside overflow-hidden) */}
         <button 
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="absolute -right-4 top-24 w-8 h-8 bg-card border border-border rounded-full flex items-center justify-center text-muted-foreground hover:text-white hover:bg-violet-600 hover:border-violet-500 hover:shadow-[0_0_20px_rgba(139,92,246,0.6)] transition-all z-50 cursor-pointer shadow-md"
+          className="hidden md:flex absolute -right-4 top-24 w-8 h-8 bg-card border border-border rounded-full items-center justify-center text-muted-foreground hover:text-white hover:bg-violet-600 hover:border-violet-500 hover:shadow-[0_0_20px_rgba(139,92,246,0.6)] transition-all z-50 cursor-pointer shadow-md"
           title={isSidebarOpen ? "Collapse Sidebar" : "Expand Sidebar"}
         >
           {isSidebarOpen ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}

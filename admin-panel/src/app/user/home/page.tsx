@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, Star, Clock, Flame, Utensils, SlidersHorizontal, Store, X, Menu, Plus, Minus, ShoppingBag, CheckCircle2, Loader2, CreditCard, Banknote, ChevronRight, Search } from "lucide-react";
+import { User, Star, Clock, Flame, Utensils, SlidersHorizontal, Store, X, Menu, Plus, Minus, ShoppingBag, CheckCircle2, Loader2, CreditCard, Banknote, ChevronRight, Search, Bike, PackageOpen, MapPin, Navigation } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -15,8 +15,13 @@ export default function UserHomePage() {
   
   // Sidebar / Drawer State
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [activeFilter, setActiveFilter] = useState("all");
+  const [activeFilter, setActiveFilter] = useState("all"); // vegan, non-veg
   const [searchQuery, setSearchQuery] = useState("");
+  
+  // Location & Advanced Filters
+  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [shopCategoryFilter, setShopCategoryFilter] = useState('all');
+  const [isFetchingLocation, setIsFetchingLocation] = useState(false);
 
   // Cart State
   const [cart, setCart] = useState<any[]>([]);
@@ -31,9 +36,52 @@ export default function UserHomePage() {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [otpStep, setOtpStep] = useState(false);
+  const [otpInput, setOtpInput] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<'upi' | 'cash'>('cash');
+  const [orderType, setOrderType] = useState<'delivery' | 'pickup' | 'dine-in'>('delivery');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
+
+  // Live Order State
+  const [activeOrders, setActiveOrders] = useState<any[]>([]);
+
+  // Fetch active orders polling
+  useEffect(() => {
+    let interval: any;
+    const fetchActiveOrders = async () => {
+      if (!userToken) return;
+      try {
+        const res = await fetch(`${API_URL}/api/users/orders`, {
+          headers: { 'Authorization': `Bearer ${userToken}` }
+        });
+        if (res.ok) {
+          const orders = await res.json();
+          const active = orders.filter((o: any) => {
+            if (['cancelled'].includes(o.status)) return false;
+            if (o.status === 'delivered') {
+               const updatedTime = new Date(o.updatedAt).getTime();
+               const now = new Date().getTime();
+               return (now - updatedTime) < 20000; // Show for 20 seconds after delivery
+            }
+            return true;
+          });
+          setActiveOrders(active);
+        }
+      } catch (error) {
+        console.error("Failed to fetch active orders", error);
+      }
+    };
+
+    if (userToken) {
+      fetchActiveOrders();
+      interval = setInterval(fetchActiveOrders, 10000); // Poll every 10s
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [userToken]);
 
   useEffect(() => {
     // Check screen size for initial sidebar state
@@ -46,9 +94,10 @@ export default function UserHomePage() {
     const id = localStorage.getItem("userId");
     const name = localStorage.getItem("userName");
     const phone = localStorage.getItem("userPhone");
-    if (token && id && name && phone) {
+    
+    if (token && name && phone) {
       setUserToken(token);
-      setUserId(id);
+      if (id) setUserId(id);
       setCustomerName(name);
       setCustomerPhone(phone);
     }
@@ -56,11 +105,15 @@ export default function UserHomePage() {
     fetchData();
   }, []);
 
-  const fetchData = async () => {
+  const fetchData = async (lat?: number, lng?: number, type: string = 'all') => {
     setLoading(true);
     try {
-      // Fetch Products
-      const prodRes = await fetch(`${API_URL}/api/shops/products/all`);
+      // Fetch Products with location/type
+      let url = `${API_URL}/api/shops/products/all?type=${type}`;
+      if (lat && lng) {
+        url += `&lat=${lat}&lng=${lng}`;
+      }
+      const prodRes = await fetch(url);
       if (prodRes.ok) {
         const prodData = await prodRes.json();
         setProducts(prodData);
@@ -79,11 +132,55 @@ export default function UserHomePage() {
     }
   };
 
+  const handleCategoryFilter = (category: string) => {
+    setShopCategoryFilter(category);
+    if (category === 'near_me') {
+      if (!navigator.geolocation) {
+        toast.error("Geolocation is not supported by your browser");
+        setShopCategoryFilter('all');
+        return;
+      }
+      setIsFetchingLocation(true);
+      toast.info("Fetching your location...");
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          setUserLocation({ lat, lng });
+          setIsFetchingLocation(false);
+          toast.success("Location updated! Showing nearby places.");
+          fetchData(lat, lng, 'near_me');
+        },
+        (error) => {
+          console.error(error);
+          setIsFetchingLocation(false);
+          toast.error("Failed to get location. Showing all shops.");
+          setShopCategoryFilter('all');
+          fetchData();
+        }
+      );
+    } else {
+      fetchData(userLocation?.lat, userLocation?.lng, category);
+    }
+  };
+
   const getGradientStyle = (themeColors?: string[]) => {
     if (!themeColors || themeColors.length === 0) return { background: "#8b5cf6" };
     if (themeColors.length === 1) return { background: themeColors[0] };
     if (themeColors.length === 2) return { background: `linear-gradient(135deg, ${themeColors[0]}, ${themeColors[1]})` };
     return { background: `linear-gradient(135deg, ${themeColors[0]}, ${themeColors[1]}, ${themeColors[2]})` };
+  };
+
+  const getTextGradientStyle = (themeColors?: string[]) => {
+    if (!themeColors || themeColors.length === 0) return { color: "#8b5cf6" };
+    if (themeColors.length === 1) return { color: themeColors[0] };
+    return { 
+      backgroundImage: `linear-gradient(to right, ${themeColors[0]}, ${themeColors[1]})`,
+      WebkitBackgroundClip: "text",
+      WebkitTextFillColor: "transparent",
+      backgroundClip: "text",
+      color: "transparent"
+    };
   };
 
   // Filters logic
@@ -145,17 +242,44 @@ export default function UserHomePage() {
     }
   };
 
-  const handleUserLogin = async () => {
+  const handleSendOtp = async () => {
     if (!customerName || !customerPhone) {
       toast.error("Please enter Name and Phone number");
       return;
     }
     setIsLoggingIn(true);
     try {
-      const res = await fetch(`${API_URL}/api/users/login`, {
+      const res = await fetch(`${API_URL}/api/users/send-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: customerName, phone: customerPhone })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setOtpStep(true);
+        toast.success(`Mock OTP: ${data.mockOtp}`, { duration: 10000 });
+      } else {
+        toast.error("Failed to send OTP");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Network error");
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otpInput) {
+      toast.error("Please enter OTP");
+      return;
+    }
+    setIsLoggingIn(true);
+    try {
+      const res = await fetch(`${API_URL}/api/users/verify-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: customerPhone, otp: otpInput })
       });
       if (res.ok) {
         const data = await res.json();
@@ -166,10 +290,12 @@ export default function UserHomePage() {
         setUserToken(data.token);
         setUserId(data.user._id);
         setIsLoginModalOpen(false);
+        setOtpStep(false);
+        setOtpInput("");
         setIsCheckoutOpen(true);
         toast.success(`Welcome, ${data.user.name}!`);
       } else {
-        toast.error("Failed to login");
+        toast.error("Invalid or expired OTP");
       }
     } catch (error) {
       console.error(error);
@@ -190,7 +316,8 @@ export default function UserHomePage() {
         customerPhone,
         orderItems: cart.map(item => ({ name: item.name, qty: item.quantity, image: item.image, price: item.price, product_id: item._id })),
         total_amount: totalPrice,
-        paymentMethod: paymentMethod === 'upi' ? 'Online/UPI' : 'Cash on Delivery'
+        paymentMethod: paymentMethod === 'upi' ? 'Online/UPI' : 'Cash on Delivery',
+        orderType
       };
 
       const res = await fetch(`${API_URL}/api/shops/${activeShopId}/orders`, {
@@ -219,24 +346,24 @@ export default function UserHomePage() {
     <div className="min-h-screen bg-[#FDFBF7] text-zinc-900 font-sans pb-24 selection:bg-zinc-200 flex flex-col md:flex-row">
       
       {/* 🚀 NAVBAR (Mobile & Desktop) */}
-      <nav className="fixed top-0 inset-x-0 z-40 bg-white/80 backdrop-blur-xl border-b border-zinc-200 h-16 flex items-center justify-between px-4 sm:px-6">
-        <div className="flex items-center gap-3">
+      <nav className="fixed top-0 inset-x-0 z-40 bg-white/80 backdrop-blur-2xl border-b border-zinc-100 h-[72px] flex items-center justify-between px-4 sm:px-6 shadow-[0_4px_30px_rgba(0,0,0,0.02)]">
+        <div className="flex items-center gap-4">
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center hover:bg-zinc-200 transition-colors"
+            className="w-11 h-11 rounded-2xl bg-zinc-50 flex items-center justify-center hover:bg-zinc-100 transition-colors border border-zinc-200/50"
           >
             {isSidebarOpen ? <X className="w-5 h-5 text-zinc-900" /> : <Menu className="w-5 h-5 text-zinc-900" />}
           </button>
           <div className="hidden md:flex flex-col">
-             <span className="text-xl font-black tracking-tight text-zinc-900">FoodUniverse</span>
+             <span className="text-[22px] font-black tracking-tighter text-zinc-900 flex items-center gap-2">FoodUniverse<span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span></span>
           </div>
           <div className="flex flex-col md:hidden">
-            <span className="text-xs font-black uppercase tracking-widest text-zinc-500">Explore</span>
-            <span className="text-sm font-bold text-zinc-900 line-clamp-1 w-32">Filters & Shops</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Delivering To</span>
+            <span className="text-sm font-bold text-zinc-900 line-clamp-1 w-32">{customerName || 'Select Location'}</span>
           </div>
         </div>
 
-        <Link href="/user/profile" className="w-10 h-10 rounded-full flex items-center justify-center bg-zinc-900 text-white shadow-md hover:scale-105 transition-transform">
+        <Link href="/user/profile" className="w-11 h-11 rounded-2xl flex items-center justify-center bg-zinc-900 text-white shadow-md hover:scale-105 transition-transform hover:shadow-lg">
           <User className="w-4 h-4" />
         </Link>
       </nav>
@@ -257,63 +384,70 @@ export default function UserHomePage() {
             
             <motion.aside 
               initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }} transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed top-16 left-0 bottom-0 w-[280px] lg:w-[320px] bg-white border-r border-zinc-200 z-50 md:z-30 overflow-y-auto flex flex-col shrink-0"
+              className="fixed top-[72px] left-0 bottom-0 w-[280px] lg:w-[320px] bg-white/60 backdrop-blur-3xl border-r border-white/50 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-50 md:z-30 overflow-y-auto flex flex-col shrink-0"
             >
               <div className="p-6">
-                <Link href="/user/profile" className="hidden md:flex items-center gap-4 p-4 rounded-2xl bg-zinc-50 hover:bg-zinc-100 transition-colors mb-8 border border-zinc-200">
-                  <div className="w-12 h-12 rounded-xl bg-zinc-900 text-white flex items-center justify-center shadow-md">
-                    <User className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-black text-zinc-900">My Account</h3>
-                    <p className="text-xs text-zinc-500 font-bold">Orders & Profile</p>
+                
+                {/* User Profile Summary - VIP Pass */}
+                <Link href="/user/profile" className="hidden md:block mb-10 bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-[1.5rem] p-5 shadow-[0_10px_30px_rgba(0,0,0,0.15)] hover:shadow-[0_15px_40px_rgba(0,0,0,0.2)] transition-all hover:-translate-y-1 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mt-10 blur-2xl group-hover:bg-white/10 transition-colors"></div>
+                  <div className="flex items-center gap-4 relative z-10">
+                    <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center text-white backdrop-blur-md border border-white/10">
+                      <User className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="font-black text-white text-base leading-tight">My Account</h3>
+                      <p className="text-xs text-zinc-400 font-bold mt-1">Orders & Profile</p>
+                    </div>
                   </div>
                 </Link>
 
                 {/* Filters */}
-                <div className="mb-8">
-                  <h3 className="text-xs font-black tracking-widest uppercase text-zinc-400 mb-4 flex items-center gap-2">
-                    <SlidersHorizontal className="w-4 h-4" /> Filters
+                <div className="mb-10">
+                  <h3 className="text-[10px] font-black tracking-widest uppercase text-zinc-400 mb-4 flex items-center gap-2">
+                    <SlidersHorizontal className="w-3 h-3" /> Explore Menu
                   </h3>
                   <div className="flex flex-col gap-2">
-                    {['all', 'veg', 'non-veg'].map((filter) => (
-                      <button 
-                        key={filter}
-                        onClick={() => setActiveFilter(filter)}
-                        className={`text-left px-4 py-3 rounded-xl font-bold text-sm transition-all ${activeFilter === filter ? 'bg-zinc-900 text-white shadow-md' : 'bg-zinc-50 text-zinc-600 hover:bg-zinc-100'}`}
-                      >
-                        {filter === 'all' ? 'All Items' : filter === 'veg' ? '🌿 Pure Veg' : '🍗 Non-Veg'}
-                      </button>
-                    ))}
+                    <button onClick={() => setActiveFilter('all')} className={`w-full text-left px-5 py-3.5 rounded-2xl font-bold transition-all text-sm flex items-center gap-3 ${activeFilter === 'all' ? 'bg-white shadow-[0_8px_30px_rgb(0,0,0,0.08)] text-zinc-900' : 'text-zinc-500 hover:bg-white/50'}`}>
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${activeFilter === 'all' ? 'bg-zinc-100 text-zinc-900' : 'bg-transparent text-zinc-400'}`}><Utensils className="w-4 h-4" /></div>
+                      All Delicacies
+                    </button>
+                    <button onClick={() => setActiveFilter('veg')} className={`w-full text-left px-5 py-3.5 rounded-2xl font-bold transition-all text-sm flex items-center gap-3 ${activeFilter === 'veg' ? 'bg-white shadow-[0_8px_30px_rgb(0,0,0,0.08)] text-green-600' : 'text-zinc-500 hover:bg-white/50'}`}>
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${activeFilter === 'veg' ? 'bg-green-50 text-green-600' : 'bg-transparent text-zinc-400'}`}>🌱</div>
+                      Pure Veg Only
+                    </button>
+                    <button onClick={() => setActiveFilter('non-veg')} className={`w-full text-left px-5 py-3.5 rounded-2xl font-bold transition-all text-sm flex items-center gap-3 ${activeFilter === 'non-veg' ? 'bg-white shadow-[0_8px_30px_rgb(0,0,0,0.08)] text-red-600' : 'text-zinc-500 hover:bg-white/50'}`}>
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${activeFilter === 'non-veg' ? 'bg-red-50 text-red-600' : 'bg-transparent text-zinc-400'}`}>🍗</div>
+                      Non-Veg Specials
+                    </button>
                   </div>
                 </div>
 
                 {/* Restaurants Near You */}
                 <div>
-                  <h3 className="text-xs font-black tracking-widest uppercase text-zinc-400 mb-4 flex items-center gap-2">
-                    <Store className="w-4 h-4" /> Restaurants Near You
+                  <h3 className="text-[10px] font-black tracking-widest uppercase text-zinc-400 mb-4 flex items-center gap-2">
+                    <Store className="w-3 h-3" /> Live Kitchens
                   </h3>
-                  <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-2">
                     {shops.map(shop => (
-                      <Link href={`/shop/${shop.shopSlug || shop.name.toLowerCase().replace(/\s+/g, '-')}`} key={shop._id}>
-                        <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-zinc-50 transition-colors cursor-pointer group">
-                          <div className="w-12 h-12 rounded-xl bg-zinc-100 overflow-hidden shadow-sm border border-zinc-200 shrink-0">
+                      <Link href={`/shop/${shop.shopSlug || shop.name.toLowerCase().replace(/\s+/g, '-')}`} key={shop._id} className="flex items-center gap-3 group p-2 -ml-2 rounded-2xl hover:bg-white/80 hover:shadow-sm transition-all cursor-pointer">
+                        <div className="relative">
+                          <div className="w-12 h-12 rounded-[1rem] overflow-hidden shadow-sm border border-white/50 group-hover:scale-105 transition-transform duration-300" style={getGradientStyle(shop.themeColors || [shop.themeColor])}>
                             {shop.logo && shop.logo !== 'https://via.placeholder.com/150' ? (
-                              <img src={shop.logo} alt={shop.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                              <img src={shop.logo} alt={shop.name} className="w-full h-full object-cover" />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center font-black text-white" style={getGradientStyle(shop.themeColors || [shop.themeColor])}>
-                                {shop.name.charAt(0)}
-                              </div>
+                              <div className="w-full h-full flex items-center justify-center font-black text-white text-lg">{shop.name.charAt(0)}</div>
                             )}
                           </div>
-                          <div className="overflow-hidden">
-                            <h4 className="font-bold text-zinc-900 text-sm truncate group-hover:text-violet-600 transition-colors">{shop.name}</h4>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className="flex items-center gap-0.5 text-[10px] font-black text-green-700 bg-green-100 px-1.5 py-0.5 rounded-sm">
-                                <Star className="w-2.5 h-2.5 fill-green-700" /> 4.9
-                              </span>
-                              <span className="text-[10px] font-bold text-zinc-500 truncate">{shop.estimatedDeliveryTime || '30 mins'}</span>
-                            </div>
+                          <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center shadow-sm">
+                            <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div>
+                          </div>
+                        </div>
+                        <div className="flex-1 overflow-hidden">
+                          <h4 className="font-bold text-zinc-900 text-sm truncate group-hover:text-zinc-600 transition-colors">{shop.name}</h4>
+                          <div className="flex items-center justify-between mt-1">
+                            <span className="flex items-center gap-1 text-[10px] font-black text-green-700 bg-green-50 border border-green-100 px-1.5 py-0.5 rounded-md uppercase tracking-widest"><Star className="w-2.5 h-2.5 fill-green-700" /> 4.9</span>
+                            <span className="text-[10px] font-bold text-zinc-400 truncate">{shop.estimatedDeliveryTime || '30m'}</span>
                           </div>
                         </div>
                       </Link>
@@ -332,29 +466,99 @@ export default function UserHomePage() {
 
         {/* The Infinite Food Feed */}
         <div>
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-            <div className="flex items-center gap-2">
-              <Flame className="w-6 h-6 text-orange-500" />
-              <h3 className="text-2xl font-black tracking-tight uppercase text-zinc-900">Infinite Food Feed</h3>
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10">
+            <div>
+              <h2 className="text-3xl md:text-4xl font-black text-zinc-900 tracking-tighter flex items-center gap-2 mb-2">
+                Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 18 ? 'Afternoon' : 'Evening'}, {customerName ? customerName.split(' ')[0] : 'Foodie'} <span className="text-3xl">👋</span>
+              </h2>
+              <p className="text-zinc-500 font-bold tracking-wide">What are you craving today?</p>
             </div>
             
             {/* Search Bar */}
-            <div className="relative w-full md:w-80">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
+            <div className="relative w-full lg:w-[400px]">
+              <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
+                <Search className="w-5 h-5 text-zinc-400" />
+              </div>
               <input 
                 type="text" 
                 placeholder="Search for your favorite food..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white border border-zinc-200 rounded-[1rem] pl-12 pr-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-shadow shadow-sm"
+                className="w-full pl-14 pr-5 py-4 rounded-[1.5rem] bg-white/80 backdrop-blur-xl border border-zinc-200 outline-none focus:ring-4 focus:ring-zinc-100 focus:bg-white transition-all font-bold text-zinc-900 placeholder:text-zinc-400 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
               />
             </div>
           </div>
 
+          {/* Advanced Category & Location Filters */}
+          <div className="flex overflow-x-auto hide-scrollbar gap-3 mb-8 pb-2">
+            <button 
+              onClick={() => handleCategoryFilter('all')}
+              className={`flex-shrink-0 px-6 py-3 rounded-full font-bold text-sm transition-all border flex items-center gap-2 ${shopCategoryFilter === 'all' ? 'bg-zinc-900 text-white border-zinc-900 shadow-md' : 'bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50'}`}
+            >
+              All Shops
+            </button>
+            <button 
+              onClick={() => handleCategoryFilter('near_me')}
+              disabled={isFetchingLocation}
+              className={`flex-shrink-0 px-6 py-3 rounded-full font-bold text-sm transition-all border flex items-center gap-2 ${shopCategoryFilter === 'near_me' ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-blue-600 border-blue-200 hover:bg-blue-50'} disabled:opacity-50`}
+            >
+              {isFetchingLocation ? <Loader2 className="w-4 h-4 animate-spin" /> : <Navigation className="w-4 h-4" />}
+              {isFetchingLocation ? 'Locating...' : 'Near Me'}
+            </button>
+            <button 
+              onClick={() => handleCategoryFilter('restaurant')}
+              className={`flex-shrink-0 px-6 py-3 rounded-full font-bold text-sm transition-all border flex items-center gap-2 ${shopCategoryFilter === 'restaurant' ? 'bg-zinc-900 text-white border-zinc-900 shadow-md' : 'bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50'}`}
+            >
+              🏢 Restaurants
+            </button>
+            <button 
+              onClick={() => handleCategoryFilter('hotel')}
+              className={`flex-shrink-0 px-6 py-3 rounded-full font-bold text-sm transition-all border flex items-center gap-2 ${shopCategoryFilter === 'hotel' ? 'bg-zinc-900 text-white border-zinc-900 shadow-md' : 'bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50'}`}
+            >
+              🏨 Hotels
+            </button>
+            <button 
+              onClick={() => handleCategoryFilter('mess')}
+              className={`flex-shrink-0 px-6 py-3 rounded-full font-bold text-sm transition-all border flex items-center gap-2 ${shopCategoryFilter === 'mess' ? 'bg-zinc-900 text-white border-zinc-900 shadow-md' : 'bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50'}`}
+            >
+              🍛 Mess
+            </button>
+            <button 
+              onClick={() => handleCategoryFilter('cafe')}
+              className={`flex-shrink-0 px-6 py-3 rounded-full font-bold text-sm transition-all border flex items-center gap-2 ${shopCategoryFilter === 'cafe' ? 'bg-zinc-900 text-white border-zinc-900 shadow-md' : 'bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50'}`}
+            >
+              ☕ Cafe
+            </button>
+          </div>
+
           {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20">
               {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-                <div key={i} className="aspect-[4/5] bg-zinc-100 rounded-[1.5rem] animate-pulse" />
+                <div key={i} className="bg-white rounded-[2rem] overflow-hidden flex flex-col h-[420px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white">
+                  {/* Image Skeleton */}
+                  <div className="w-full aspect-[4/3] bg-zinc-100 animate-pulse" />
+                  
+                  {/* Content Skeleton */}
+                  <div className="p-6 flex-1 flex flex-col bg-white">
+                    <div className="flex justify-between items-start gap-4 mb-4">
+                      <div className="w-2/3 h-6 bg-zinc-100 rounded-lg animate-pulse" />
+                      <div className="shrink-0 w-5 h-5 rounded-md bg-zinc-100 animate-pulse" />
+                    </div>
+                    
+                    <div className="w-1/2 h-8 bg-zinc-50 rounded-xl mb-4 animate-pulse" />
+                    
+                    <div className="space-y-2 mb-6">
+                      <div className="w-full h-3 bg-zinc-50 rounded-full animate-pulse" />
+                      <div className="w-4/5 h-3 bg-zinc-50 rounded-full animate-pulse" />
+                    </div>
+                    
+                    {/* Bottom Row Skeleton */}
+                    <div className="mt-auto flex items-end justify-between border-t border-zinc-50 pt-5">
+                      <div className="w-16 h-10 bg-zinc-100 rounded-xl animate-pulse" />
+                      <div className="w-28 h-12 bg-zinc-100 rounded-2xl animate-pulse" />
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           ) : filteredProducts.length === 0 ? (
@@ -371,68 +575,82 @@ export default function UserHomePage() {
                 const cartItem = cart.find(item => item._id === product._id);
                 
                 return (
-                  <div key={product._id} className="bg-white border border-zinc-200/60 rounded-[1.5rem] overflow-hidden flex flex-col group hover:-translate-y-1.5 transition-all duration-500 relative shadow-sm hover:shadow-[0_20px_40px_-15px_rgba(249,115,22,0.15)]">
+                  <div key={product._id} className="group bg-white rounded-[2rem] overflow-hidden flex flex-col h-full shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] hover:-translate-y-1 transition-all duration-500 border border-white">
                     
                     {/* Image Section */}
-                    <div className="h-56 w-full overflow-hidden relative">
-                      {/* Gradient overlay for better text readability */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10 pointer-events-none" />
-                      <img src={product.image || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&q=80"} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out" />
-                      
-                      {/* Veg/Non-Veg Badge */}
-                      <div className="absolute top-4 right-4 z-20 flex flex-col gap-2 items-end">
-                        {isNonVeg(product.name) ? (
-                          <div className="shrink-0 w-5 h-5 rounded-md border-2 border-red-500 bg-white flex items-center justify-center shadow-lg"><div className="w-2.5 h-2.5 rounded-full bg-red-500"></div></div>
-                        ) : (
-                          <div className="shrink-0 w-5 h-5 rounded-md border-2 border-green-500 bg-white flex items-center justify-center shadow-lg"><div className="w-2.5 h-2.5 rounded-full bg-green-500"></div></div>
-                        )}
-                      </div>
-                      
-                      {/* Price Tag */}
-                      <div className="absolute bottom-4 left-4 z-20 bg-orange-500/90 backdrop-blur-md text-white px-3.5 py-1 rounded-xl font-black text-lg shadow-[0_4px_20px_rgba(249,115,22,0.4)] border border-orange-400/50 flex items-center">
-                        <span className="text-orange-100 text-sm mr-0.5">₹</span>{product.price}
-                      </div>
+                    <div className="relative w-full aspect-[4/3] overflow-hidden bg-zinc-50">
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                      <img 
+                        src={product.image || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&q=80"} 
+                        alt={product.name} 
+                        onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&q=80"; e.currentTarget.onerror = null; }}
+                        className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-110" 
+                      />
                     </div>
 
                     {/* Content Section */}
-                    <div className="p-5 flex-1 flex flex-col bg-gradient-to-b from-white to-zinc-50/50">
-                      <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-bold text-xl leading-tight group-hover:text-orange-500 transition-colors line-clamp-1 text-zinc-900">{product.name}</h3>
+                    <div className="p-6 flex-1 flex flex-col relative z-20 bg-white">
+                      <div className="flex justify-between items-start gap-4 mb-3">
+                        <h4 className="text-xl font-black text-zinc-900 leading-tight line-clamp-2">{product.name}</h4>
+                        {isNonVeg(product.name) ? (
+                          <div className="shrink-0 w-5 h-5 rounded-md border-2 border-red-500/30 flex items-center justify-center shadow-sm"><div className="w-2 h-2 rounded-full bg-red-500"></div></div>
+                        ) : (
+                          <div className="shrink-0 w-5 h-5 rounded-md border-2 border-green-500/30 flex items-center justify-center shadow-sm"><div className="w-2 h-2 rounded-full bg-green-500"></div></div>
+                        )}
                       </div>
 
                       {/* Shop Brand Info */}
                       <Link 
                         href={shopUrl}
-                        className="flex items-center gap-2 mb-3 text-zinc-500 bg-zinc-100/80 px-2.5 py-1.5 rounded-lg border border-zinc-200/50 self-start transition-colors hover:bg-zinc-200 cursor-pointer"
+                        className="flex items-center gap-2.5 mb-4 px-3 py-2 rounded-xl bg-zinc-50/80 hover:bg-zinc-100 self-start w-fit transition-colors cursor-pointer border border-zinc-100"
                       >
                         {shop.logo && shop.logo !== 'https://via.placeholder.com/150' ? (
-                          <img src={shop.logo} alt={shop.name} className="w-5 h-5 rounded-full object-cover border border-zinc-200" />
+                          <img src={shop.logo} alt={shop.name} className="w-5 h-5 rounded-full object-cover shadow-sm" />
                         ) : (
-                          <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black text-white" style={getGradientStyle(shop.themeColors || [shop.themeColor])}>
+                          <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black text-white shadow-sm" style={getGradientStyle(shop.themeColors || [shop.themeColor])}>
                             {shop.name?.charAt(0) || 'S'}
                           </div>
                         )}
-                        <span className="text-xs font-semibold text-zinc-700">{shop.name || 'Unknown Shop'}</span>
+                        <span className="text-[11px] font-bold text-zinc-600 uppercase tracking-widest flex items-center gap-2">
+                          {shop.name || 'Unknown Shop'}
+                          {product.shopDistance !== undefined && (
+                            <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-[9px] lowercase flex items-center gap-0.5">
+                              <MapPin className="w-2.5 h-2.5" /> {(product.shopDistance / 1000).toFixed(1)} km
+                            </span>
+                          )}
+                        </span>
                       </Link>
                       
-                      <p className="text-sm text-zinc-500 line-clamp-2 mb-5 leading-relaxed">{product.description || 'Delicious and fresh ingredients.'}</p>
+                      <p className="text-sm text-zinc-500 line-clamp-2 leading-relaxed mb-6 font-medium">{product.description || 'Delicious and fresh ingredients.'}</p>
                       
-                      {/* Action Buttons */}
-                      <div className="mt-auto pt-4 border-t border-zinc-100">
-                        {cartItem ? (
-                          <div className="flex items-center justify-between bg-zinc-100 rounded-[1rem] p-1 border border-zinc-200/60 shadow-inner">
-                            <button onClick={() => updateQuantity(product._id, -1)} className="w-10 h-10 flex items-center justify-center rounded-xl bg-white text-zinc-900 shadow-sm font-bold text-lg transition-transform active:scale-95 hover:bg-zinc-50">-</button>
-                            <span className="font-black text-lg w-12 text-center text-zinc-900">{cartItem.quantity}</span>
-                            <button onClick={() => updateQuantity(product._id, 1)} className="w-10 h-10 flex items-center justify-center rounded-xl bg-orange-500 text-white shadow-sm font-bold text-lg transition-transform active:scale-95 hover:bg-orange-600">+</button>
-                          </div>
-                        ) : (
-                          <button 
-                            onClick={() => addToCart(product)}
-                            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white py-3 rounded-[1rem] font-bold text-[15px] transition-all shadow-md shadow-orange-500/20 hover:shadow-orange-500/40 active:scale-[0.98]"
-                          >
-                            <ShoppingBag className="w-4 h-4" /> Add to Cart
-                          </button>
-                        )}
+                      {/* Bottom Row: Price & Actions */}
+                      <div className="mt-auto flex items-end justify-between border-t border-zinc-50 pt-5">
+                        <div>
+                          <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1">Price</span>
+                          <span className="text-3xl font-black tracking-tighter" style={getTextGradientStyle(shop.themeColors || [shop.themeColor])}>₹{product.price}</span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {cartItem ? (
+                            <div className="h-[48px] flex items-center justify-between rounded-2xl p-1 bg-zinc-50 border border-zinc-200 shadow-inner min-w-[120px]">
+                              <button onClick={() => updateQuantity(product._id, -1)} className="w-10 h-10 flex items-center justify-center rounded-xl bg-white text-zinc-900 shadow-sm font-bold text-lg hover:bg-zinc-100 transition-colors">-</button>
+                              <span className="font-black text-base w-8 text-center text-zinc-900">{cartItem.quantity}</span>
+                              <button onClick={() => updateQuantity(product._id, 1)} className="w-10 h-10 flex items-center justify-center rounded-xl text-white shadow-md font-bold text-lg hover:brightness-110 transition-all" style={getGradientStyle(shop.themeColors || [shop.themeColor])}>+</button>
+                            </div>
+                          ) : (
+                            <button 
+                              onClick={() => { 
+                                addToCart(product); 
+                                if (!userToken && !localStorage.getItem("userToken")) setIsLoginModalOpen(true);
+                                else setIsCheckoutOpen(true); 
+                              }}
+                              className="h-[48px] px-8 flex items-center justify-center rounded-2xl text-white font-black uppercase tracking-widest text-[11px] transition-all hover:-translate-y-0.5 hover:shadow-lg shadow-md group-hover:shadow-xl"
+                              style={getGradientStyle(shop.themeColors || [shop.themeColor])}
+                            >
+                              Order Now
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -541,23 +759,44 @@ export default function UserHomePage() {
                 <button onClick={() => setIsLoginModalOpen(false)} className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500 hover:text-zinc-900 transition-colors"><X className="w-5 h-5" /></button>
               </div>
 
-              <div className="space-y-4 mb-8">
-                <div>
-                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest ml-2 mb-2 block">Your Name</label>
-                  <input type="text" placeholder="Rahul Kumar" value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="w-full px-5 py-4 rounded-2xl bg-zinc-50 border border-zinc-200 outline-none focus:border-zinc-400 focus:bg-white transition-all font-bold text-zinc-900" />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest ml-2 mb-2 block">Phone Number</label>
-                  <input type="tel" placeholder="9876543210" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} className="w-full px-5 py-4 rounded-2xl bg-zinc-50 border border-zinc-200 outline-none focus:border-zinc-400 focus:bg-white transition-all font-bold text-zinc-900" />
-                </div>
-              </div>
-
-              <button 
-                onClick={handleUserLogin} disabled={isLoggingIn || !customerName || !customerPhone}
-                className="w-full py-5 rounded-2xl bg-zinc-900 text-white font-black uppercase tracking-widest text-lg hover:shadow-xl hover:-translate-y-1 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
-              >
-                {isLoggingIn ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Continue'}
-              </button>
+              {!otpStep ? (
+                <>
+                  <div className="space-y-4 mb-8">
+                    <div>
+                      <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest ml-2 mb-2 block">Your Name</label>
+                      <input type="text" placeholder="Rahul Kumar" value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="w-full px-5 py-4 rounded-2xl bg-zinc-50 border border-zinc-200 outline-none focus:border-zinc-400 focus:bg-white transition-all font-bold text-zinc-900" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest ml-2 mb-2 block">Phone Number</label>
+                      <input type="tel" placeholder="9876543210" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} className="w-full px-5 py-4 rounded-2xl bg-zinc-50 border border-zinc-200 outline-none focus:border-zinc-400 focus:bg-white transition-all font-bold text-zinc-900" />
+                    </div>
+                  </div>
+                  <button 
+                    onClick={handleSendOtp} disabled={isLoggingIn || !customerName || !customerPhone}
+                    className="w-full py-5 rounded-2xl bg-zinc-900 text-white font-black uppercase tracking-widest text-lg hover:shadow-xl hover:-translate-y-1 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                  >
+                    {isLoggingIn ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Send OTP'}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="space-y-4 mb-8">
+                    <div>
+                      <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest ml-2 mb-2 block">Enter OTP</label>
+                      <input type="text" placeholder="123456" value={otpInput} onChange={(e) => setOtpInput(e.target.value)} className="w-full px-5 py-4 rounded-2xl bg-zinc-50 border border-zinc-200 outline-none focus:border-zinc-400 focus:bg-white transition-all font-bold text-zinc-900 tracking-[0.5em] text-center text-xl" maxLength={6} />
+                    </div>
+                  </div>
+                  <button 
+                    onClick={handleVerifyOtp} disabled={isLoggingIn || !otpInput || otpInput.length < 6}
+                    className="w-full py-5 rounded-2xl bg-green-600 text-white font-black uppercase tracking-widest text-lg hover:shadow-xl hover:-translate-y-1 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                  >
+                    {isLoggingIn ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Verify & Continue'}
+                  </button>
+                  <button onClick={() => setOtpStep(false)} className="w-full mt-4 text-zinc-500 font-bold text-sm hover:text-zinc-900 transition-colors">
+                    Back to Phone Number
+                  </button>
+                </>
+              )}
             </motion.div>
           </div>
         )}
@@ -569,72 +808,227 @@ export default function UserHomePage() {
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-zinc-900/60 backdrop-blur-md" onClick={() => !isPlacingOrder && !orderSuccess && setIsCheckoutOpen(false)} />
             
-            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="w-full max-w-md bg-white rounded-[2.5rem] relative z-10 overflow-hidden shadow-2xl border border-zinc-100 flex flex-col max-h-[90vh]">
-              
-              {!orderSuccess ? (
-                <>
-                  <div className="p-6 border-b border-zinc-100 flex items-center justify-between bg-white shrink-0">
-                    <h2 className="text-2xl font-black tracking-tight text-zinc-900">Checkout</h2>
-                    <button onClick={() => setIsCheckoutOpen(false)} className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200 transition-colors"><X className="w-5 h-5" /></button>
-                  </div>
+            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="w-full max-w-md bg-white rounded-[2.5rem] relative z-10 overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+              {(() => {
+                const activeShop = cart.length > 0 ? cart[0].shop_id : null;
+                const shopThemeColors = activeShop?.themeColors || (activeShop?.themeColor ? [activeShop.themeColor] : undefined);
+                
+                return (
+                  <>
+                    <div className="h-2 w-full shrink-0" style={getGradientStyle(shopThemeColors)} />
+                    
+                    <div className="p-8 overflow-y-auto">
+                      {orderSuccess ? (
+                        <div className="flex flex-col items-center justify-center py-10 text-center">
+                          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-24 h-24 rounded-full flex items-center justify-center mb-6 shadow-lg" style={getGradientStyle(shopThemeColors)}>
+                            <CheckCircle2 className="w-12 h-12 text-white" />
+                          </motion.div>
+                          <h3 className="text-3xl font-black mb-3 text-zinc-900 tracking-tighter">Order Placed!</h3>
+                          <p className="text-zinc-500 font-medium leading-relaxed">Your order has been transmitted to the kitchen. Please show this screen at the counter.</p>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-center justify-between mb-8 shrink-0">
+                            <h2 className="text-3xl font-black text-zinc-900 tracking-tighter">Checkout</h2>
+                            <button onClick={() => setIsCheckoutOpen(false)} className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500 hover:text-zinc-900 transition-colors"><X className="w-5 h-5" /></button>
+                          </div>
 
-                  <div className="p-6 overflow-y-auto">
-                    {/* User Info Bar */}
-                    <div className="bg-zinc-900 text-white p-4 rounded-2xl mb-8 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center font-black">
-                          {customerName.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="text-sm font-black leading-tight">{customerName}</p>
-                          <p className="text-xs text-zinc-400 font-bold">{customerPhone}</p>
-                        </div>
-                      </div>
-                      <Link href="/user/profile" className="text-xs font-black uppercase tracking-widest text-violet-400">Edit</Link>
+                          <div className="bg-zinc-50 rounded-3xl p-5 border border-zinc-100 mb-6 flex items-center gap-4 shrink-0">
+                            <div className="w-14 h-14 rounded-full flex items-center justify-center font-black text-xl text-white shadow-md" style={getGradientStyle(shopThemeColors)}>
+                              {customerName ? customerName.charAt(0).toUpperCase() : 'U'}
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-[10px] text-zinc-400 font-black uppercase tracking-widest mb-1">Delivering To</p>
+                              <p className="font-bold text-zinc-900 text-lg line-clamp-1">{customerName || 'User'}</p>
+                              <p className="text-xs text-zinc-500 line-clamp-1">{customerPhone}</p>
+                            </div>
+                          </div>
+
+                          <div className="mb-8">
+                            <div className="flex justify-between items-end mb-6 bg-zinc-50 p-5 rounded-3xl border border-zinc-100">
+                              <span className="text-zinc-500 font-bold uppercase tracking-widest text-xs">Total to Pay</span>
+                              <span className="text-4xl font-black" style={getTextGradientStyle(shopThemeColors)}>₹{totalPrice}</span>
+                            </div>
+                            
+                            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-4 ml-2">Order Type</span>
+                            <div className="grid grid-cols-3 gap-3 mb-6">
+                              <button onClick={() => setOrderType('delivery')} className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all ${orderType === 'delivery' ? 'bg-zinc-900 border-zinc-900 text-white shadow-md' : 'border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50'}`}>
+                                <Bike className="w-5 h-5 mb-1" />
+                                <span className="font-bold text-xs">Delivery</span>
+                              </button>
+                              <button onClick={() => setOrderType('pickup')} className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all ${orderType === 'pickup' ? 'bg-zinc-900 border-zinc-900 text-white shadow-md' : 'border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50'}`}>
+                                <PackageOpen className="w-5 h-5 mb-1" />
+                                <span className="font-bold text-xs">Pickup</span>
+                              </button>
+                              {activeShop?.allowsDineIn ? (
+                                <button onClick={() => setOrderType('dine-in')} className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all ${orderType === 'dine-in' ? 'bg-zinc-900 border-zinc-900 text-white shadow-md' : 'border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50'}`}>
+                                  <Utensils className="w-5 h-5 mb-1" />
+                                  <span className="font-bold text-xs">Dine-In</span>
+                                </button>
+                              ) : (
+                                <button disabled className="flex flex-col items-center justify-center p-3 rounded-2xl border border-zinc-100 bg-zinc-50 text-zinc-300 cursor-not-allowed">
+                                  <Utensils className="w-5 h-5 mb-1 opacity-50" />
+                                  <span className="font-bold text-xs">No Dine-In</span>
+                                </button>
+                              )}
+                            </div>
+
+                            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-4 ml-2">Select Payment</span>
+                            <div className="grid grid-cols-2 gap-3">
+                              <button onClick={() => setPaymentMethod('cash')} className={`flex flex-col items-center justify-center p-4 rounded-2xl border transition-all ${paymentMethod === 'cash' ? 'bg-zinc-900 border-zinc-900 text-white shadow-md' : 'border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50'}`}>
+                                <span className="font-bold">Cash</span>
+                                <span className="text-[10px] mt-1 opacity-70">Pay at counter</span>
+                              </button>
+                              
+                              {activeShop?.upiId ? (
+                                <button onClick={() => setPaymentMethod('upi')} className={`flex flex-col items-center justify-center p-4 rounded-2xl border transition-all ${paymentMethod === 'upi' ? 'bg-zinc-900 border-zinc-900 text-white shadow-md' : 'border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50'}`}>
+                                  <span className="font-bold">UPI</span>
+                                  <span className="text-[10px] mt-1 opacity-70">Scan QR</span>
+                                </button>
+                              ) : (
+                                <button disabled className="flex flex-col items-center justify-center p-4 rounded-2xl border border-zinc-100 bg-zinc-50 text-zinc-300 cursor-not-allowed">
+                                  <span className="font-bold">UPI</span>
+                                  <span className="text-[10px] mt-1">Not Available</span>
+                                </button>
+                              )}
+                            </div>
+
+                            <AnimatePresence>
+                              {paymentMethod === 'upi' && activeShop?.upiId && (
+                                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                                  <div className="bg-zinc-50 border border-zinc-100 rounded-3xl p-6 flex flex-col items-center text-center mt-4">
+                                    <div className="p-3 bg-white rounded-2xl shadow-sm border border-zinc-200 mb-4">
+                                      <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=${activeShop.upiId}&pn=${encodeURIComponent(activeShop.name)}`} alt="UPI QR Code" className="w-32 h-32" />
+                                    </div>
+                                    <p className="font-mono font-bold text-zinc-900 bg-white border border-zinc-200 px-4 py-2 rounded-xl shadow-sm">{activeShop.upiId}</p>
+                                    <p className="text-[10px] text-zinc-400 uppercase tracking-widest mt-4 font-bold">Scan using PhonePe, GPay or Paytm</p>
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+
+                          <button 
+                            onClick={handlePlaceOrder} disabled={isPlacingOrder || !customerName || !customerPhone}
+                            className="w-full shrink-0 py-5 rounded-2xl text-white font-black uppercase tracking-widest text-lg hover:shadow-xl hover:-translate-y-1 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                            style={getGradientStyle(shopThemeColors)}
+                          >
+                            {isPlacingOrder ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Place Order Now'}
+                          </button>
+                        </>
+                      )}
                     </div>
-
-                    <h3 className="font-black text-zinc-900 mb-4 text-lg">Payment Method</h3>
-                    <div className="grid grid-cols-2 gap-3 mb-8">
-                      <div onClick={() => setPaymentMethod('upi')} className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col items-center gap-3 ${paymentMethod === 'upi' ? 'border-zinc-900 bg-zinc-50' : 'border-zinc-100 hover:border-zinc-300'}`}>
-                        <div className={`w-12 h-12 rounded-full flex items-center justify-center ${paymentMethod === 'upi' ? 'bg-zinc-900 text-white' : 'bg-zinc-100 text-zinc-400'}`}>
-                          <CreditCard className="w-5 h-5" />
-                        </div>
-                        <span className={`font-black text-sm ${paymentMethod === 'upi' ? 'text-zinc-900' : 'text-zinc-500'}`}>Pay via UPI</span>
-                      </div>
-                      <div onClick={() => setPaymentMethod('cash')} className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col items-center gap-3 ${paymentMethod === 'cash' ? 'border-zinc-900 bg-zinc-50' : 'border-zinc-100 hover:border-zinc-300'}`}>
-                        <div className={`w-12 h-12 rounded-full flex items-center justify-center ${paymentMethod === 'cash' ? 'bg-zinc-900 text-white' : 'bg-zinc-100 text-zinc-400'}`}>
-                          <Banknote className="w-5 h-5" />
-                        </div>
-                        <span className={`font-black text-sm ${paymentMethod === 'cash' ? 'text-zinc-900' : 'text-zinc-500'}`}>Pay at Shop</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-6 bg-white border-t border-zinc-100 shrink-0">
-                    <button 
-                      onClick={handlePlaceOrder}
-                      disabled={isPlacingOrder}
-                      className="w-full py-5 rounded-2xl bg-zinc-900 text-white font-black uppercase tracking-widest text-lg hover:shadow-xl hover:-translate-y-1 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
-                    >
-                      {isPlacingOrder ? <Loader2 className="w-6 h-6 animate-spin" /> : `Pay ₹${totalPrice}`}
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <div className="p-12 flex flex-col items-center justify-center text-center bg-white">
-                  <div className="w-24 h-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-6">
-                    <CheckCircle2 className="w-12 h-12" />
-                  </div>
-                  <h2 className="text-3xl font-black text-zinc-900 tracking-tight mb-2">Order Placed!</h2>
-                  <p className="text-zinc-500 font-medium mb-8">Your order has been sent to the restaurant.</p>
-                  <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest animate-pulse">Redirecting to feed...</p>
-                </div>
-              )}
+                  </>
+                );
+              })()}
             </motion.div>
           </div>
         )}
       </AnimatePresence>
 
+      {/* 🟢 Live Order Tracker Floating Widget */}
+      <AnimatePresence>
+        {activeOrders.length > 0 && (
+          <motion.div 
+            initial={{ y: 150, opacity: 0, scale: 0.9 }} 
+            animate={{ y: 0, opacity: 1, scale: 1 }} 
+            exit={{ y: 150, opacity: 0, scale: 0.9 }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="fixed bottom-6 left-0 right-0 z-50 px-4 md:px-0 flex justify-center pointer-events-none"
+          >
+            {activeOrders.slice(0, 1).map(order => {
+               // derive status progress
+               const steps = ['pending', 'processing', 'ready', 'shipped'];
+               let currentStepIdx = steps.indexOf(order.status);
+               if (currentStepIdx === -1) currentStepIdx = 0; // fallback
+               
+               const progress = ((currentStepIdx + 1) / steps.length) * 100;
+               
+               if (order.status === 'delivered') {
+                 return (
+                   <Link href="/user/profile" key={order._id} className="pointer-events-auto w-full md:w-[500px] bg-emerald-500 text-white rounded-[2rem] p-5 shadow-[0_20px_50px_rgba(16,185,129,0.3)] border border-emerald-400 flex flex-col hover:bg-emerald-600 transition-colors group cursor-pointer overflow-hidden relative">
+                     <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full blur-3xl" />
+                     <div className="flex items-center justify-between relative z-10">
+                       <div className="flex items-center gap-4">
+                         <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center shadow-inner">
+                           <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+                         </div>
+                         <div>
+                           <h4 className="font-black text-2xl tracking-tight mb-1">Successfully Delivered! 🎉</h4>
+                           <p className="text-sm font-bold text-emerald-50">Hope you enjoy your meal from {order.shop_id?.name}</p>
+                         </div>
+                       </div>
+                     </div>
+                   </Link>
+                 )
+               }
+
+               return (
+                 <Link href="/user/profile" key={order._id} className="pointer-events-auto w-full md:w-[500px] bg-zinc-900 text-white rounded-[2rem] p-5 shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-zinc-800 flex flex-col hover:bg-zinc-800 transition-colors group cursor-pointer overflow-hidden relative">
+                   {/* Background Glow */}
+                   <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/10 rounded-full blur-3xl" />
+                   
+                   <div className="flex items-center justify-between mb-4 relative z-10">
+                     <div className="flex items-center gap-3">
+                       <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center border border-white/10">
+                         {order.status === 'pending' ? <ShoppingBag className="w-5 h-5 text-zinc-300" /> : 
+                          order.status === 'processing' ? <Flame className="w-5 h-5 text-orange-400 animate-pulse" /> :
+                          order.status === 'ready' ? <PackageOpen className="w-5 h-5 text-blue-400" /> :
+                          <Bike className="w-5 h-5 text-green-400" />}
+                       </div>
+                       <div>
+                         <h4 className="font-black text-lg flex items-center gap-2">
+                           {order.status === 'pending' ? 'Order Received' : 
+                            order.status === 'processing' ? 'Preparing your food' :
+                            order.status === 'ready' ? 'Ready for Pickup' :
+                            'Out for Delivery'} 
+                           <span className="flex h-2 w-2 relative">
+                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                             <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                           </span>
+                         </h4>
+                         <p className="text-xs font-bold text-zinc-400">{order.shop_id?.name || 'Restaurant'}</p>
+                       </div>
+                     </div>
+                     <div className="text-right">
+                       <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 block mb-1">Items</span>
+                       <span className="font-bold text-sm bg-white/10 px-2.5 py-1 rounded-lg">{order.orderItems?.length || 0}</span>
+                     </div>
+                   </div>
+
+                   {/* Cute Preparation Message */}
+                   {order.status === 'processing' && order.preparationTime && (
+                     <div className="mb-4 bg-white/5 border border-white/10 rounded-xl p-3 flex items-center gap-3 z-10">
+                       <div className="bg-orange-500/20 p-2 rounded-lg text-orange-400">
+                         <Clock className="w-4 h-4" />
+                       </div>
+                       <p className="text-sm font-medium text-zinc-200">
+                         ✨ Your food is being prepared with love. Ready in <span className="font-bold text-white">{order.preparationTime}</span>!
+                       </p>
+                     </div>
+                   )}
+
+                   {/* Progress Bar */}
+                   <div className="relative w-full h-2 bg-white/10 rounded-full overflow-hidden z-10 mb-2">
+                     <motion.div 
+                       initial={{ width: 0 }}
+                       animate={{ width: `${progress}%` }}
+                       transition={{ duration: 1, ease: "easeOut" }}
+                       className={`absolute top-0 left-0 h-full rounded-full ${order.status === 'pending' ? 'bg-zinc-400' : order.status === 'processing' ? 'bg-orange-500' : order.status === 'ready' ? 'bg-blue-500' : 'bg-green-500'}`} 
+                     />
+                   </div>
+                   <div className="flex justify-between text-[10px] font-bold text-zinc-500 uppercase tracking-widest z-10">
+                     <span className={order.status === 'pending' ? 'text-zinc-300' : ''}>Placed</span>
+                     <span className={order.status === 'processing' ? 'text-orange-400' : ''}>Preparing</span>
+                     <span className={order.status === 'ready' ? 'text-blue-400' : ''}>Ready</span>
+                     <span className={order.status === 'shipped' ? 'text-green-400' : ''}>On the way</span>
+                   </div>
+                 </Link>
+               )
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
