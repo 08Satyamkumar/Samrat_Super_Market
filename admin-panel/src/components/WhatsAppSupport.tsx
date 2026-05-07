@@ -13,7 +13,7 @@ export function WhatsAppSupport() {
   const isUserArea = pathname?.startsWith("/user/");
   const isSellerArea = pathname?.startsWith("/seller/dashboard");
   
-  if (!isUserArea && !isSellerArea) {
+  if (!isSellerArea) {
     return null;
   }
 

@@ -363,9 +363,26 @@ export default function UserHomePage() {
           </div>
         </div>
 
-        <Link href="/user/profile" className="w-11 h-11 rounded-2xl flex items-center justify-center bg-zinc-900 text-white shadow-md hover:scale-105 transition-transform hover:shadow-lg">
-          <User className="w-4 h-4" />
-        </Link>
+        <div className="flex items-center gap-3">
+          {/* WhatsApp Support Logo */}
+          <a 
+            href={`https://wa.me/919217571488?text=${encodeURIComponent("Hello Super Admin, I need some help with Samrat Market.")}`}
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="h-11 flex items-center justify-center gap-2 bg-black hover:bg-zinc-900 border border-white/10 rounded-2xl shadow-md transition-all cursor-pointer px-3 relative overflow-hidden group"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-[100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+            <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-zinc-700 to-black border border-white/30 shadow-[0_0_15px_rgba(255,255,255,0.3)] relative z-10">
+              <span className="text-white font-black text-[10px] tracking-tighter drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]">SM</span>
+            </div>
+            <span className="text-zinc-300 font-medium text-[10px] tracking-wide group-hover:text-white transition-colors relative z-10">Help</span>
+          </a>
+
+          {/* Profile */}
+          <Link href="/user/profile" className="w-11 h-11 rounded-2xl flex items-center justify-center bg-zinc-900 text-white shadow-md hover:scale-105 transition-transform hover:shadow-lg">
+            <User className="w-4 h-4" />
+          </Link>
+        </div>
       </nav>
 
       {/* spacer for navbar */}
@@ -454,22 +471,6 @@ export default function UserHomePage() {
                     ))}
                   </div>
                 </div>
-
-              {/* Help & Support */}
-              <div className="mt-8 pt-6 border-t border-zinc-100 pb-10">
-                <h3 className="text-[10px] font-black tracking-widest uppercase text-zinc-400 mb-4 flex items-center gap-2">
-                  <MessageCircle className="w-3 h-3" /> Need Help?
-                </h3>
-                <a 
-                  href={`https://wa.me/919217571488?text=${encodeURIComponent("Hello Super Admin, I need some help with Samrat Market.")}`}
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="w-full bg-[#25D366] hover:bg-[#1DA851] text-white flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold shadow-md hover:shadow-lg transition-all"
-                >
-                  <MessageCircle className="w-5 h-5" />
-                  Chat on WhatsApp
-                </a>
-              </div>
 
               </div>
             </motion.aside>
