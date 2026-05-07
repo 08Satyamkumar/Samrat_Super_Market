@@ -28,7 +28,7 @@ export default function SellerDashboardLayout({
   const pathname = usePathname();
   
   // States
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [sellerName, setSellerName] = useState("");
   const [shopName, setShopName] = useState("");

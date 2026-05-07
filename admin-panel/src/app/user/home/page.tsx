@@ -14,7 +14,7 @@ export default function UserHomePage() {
   const [loading, setLoading] = useState(true);
   
   // Sidebar / Drawer State
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState("all"); // vegan, non-veg
   const [searchQuery, setSearchQuery] = useState("");
   
@@ -92,11 +92,6 @@ export default function UserHomePage() {
   }, [userToken]);
 
   useEffect(() => {
-    // Check screen size for initial sidebar state
-    if (typeof window !== 'undefined' && window.innerWidth < 768) {
-      setIsSidebarOpen(false);
-    }
-    
     // Load User Data
     const token = localStorage.getItem("userToken");
     const id = localStorage.getItem("userId");
