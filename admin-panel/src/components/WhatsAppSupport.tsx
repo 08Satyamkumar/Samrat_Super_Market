@@ -22,7 +22,7 @@ export function WhatsAppSupport() {
   const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
 
   return (
-    <div className="fixed top-[85px] right-4 md:top-auto md:bottom-6 md:right-6 z-[100] flex flex-col items-end gap-2 pointer-events-none">
+    <div className="hidden md:flex fixed top-[85px] right-4 md:top-auto md:bottom-6 md:right-6 z-[100] flex-col items-end gap-2 pointer-events-none">
       <AnimatePresence>
         {isHovered && (
           <motion.div

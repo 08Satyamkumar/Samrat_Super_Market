@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, Star, Clock, Flame, Utensils, SlidersHorizontal, Store, X, Menu, Plus, Minus, ShoppingBag, CheckCircle2, Loader2, CreditCard, Banknote, ChevronRight, Search, Bike, PackageOpen, MapPin, Navigation } from "lucide-react";
+import { User, Star, Clock, Flame, Utensils, SlidersHorizontal, Store, X, Menu, Plus, Minus, ShoppingBag, CheckCircle2, Loader2, CreditCard, Banknote, ChevronRight, Search, Bike, PackageOpen, MapPin, Navigation, MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -454,6 +454,22 @@ export default function UserHomePage() {
                     ))}
                   </div>
                 </div>
+
+              {/* Help & Support */}
+              <div className="mt-8 pt-6 border-t border-zinc-100 pb-10">
+                <h3 className="text-[10px] font-black tracking-widest uppercase text-zinc-400 mb-4 flex items-center gap-2">
+                  <MessageCircle className="w-3 h-3" /> Need Help?
+                </h3>
+                <a 
+                  href={`https://wa.me/919217571488?text=${encodeURIComponent("Hello Super Admin, I need some help with Samrat Market.")}`}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="w-full bg-[#25D366] hover:bg-[#1DA851] text-white flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold shadow-md hover:shadow-lg transition-all"
+                >
+                  <MessageCircle className="w-5 h-5" />
+                  Chat on WhatsApp
+                </a>
+              </div>
 
               </div>
             </motion.aside>
