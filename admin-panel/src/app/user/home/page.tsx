@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { User, Star, Clock, Flame, Utensils, SlidersHorizontal, Store, X, Menu, Plus, Minus, ShoppingBag, CheckCircle2, Loader2, CreditCard, Banknote, ChevronRight, Search, Bike, PackageOpen, MapPin, Navigation, MessageCircle } from "lucide-react";
 import Link from "next/link";
@@ -47,6 +47,8 @@ export default function UserHomePage() {
   const [activeOrders, setActiveOrders] = useState<any[]>([]);
 
   // Fetch active orders polling
+  const dismissedOrderIdsRef = useRef<Set<string>>(new Set());
+
   useEffect(() => {
     let interval: any;
     const fetchActiveOrders = async () => {
@@ -58,7 +60,13 @@ export default function UserHomePage() {
         if (res.ok) {
           const orders = await res.json();
           const active = orders.filter((o: any) => {
-            if (['cancelled'].includes(o.status)) return false;
+            if (dismissedOrderIdsRef.current.has(o._id)) return false;
+            
+            if (['cancelled'].includes(o.status)) {
+               const updatedTime = new Date(o.updatedAt).getTime();
+               const now = new Date().getTime();
+               return (now - updatedTime) < 60000; // Show cancelled for 60s unless dismissed
+            }
             if (o.status === 'delivered') {
                const updatedTime = new Date(o.updatedAt).getTime();
                const now = new Date().getTime();
@@ -480,6 +488,134 @@ export default function UserHomePage() {
 
       {/* 🍔 MAIN CONTENT AREA */}
       <main className={`flex-1 w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10 min-w-0 transition-all duration-300 md:mt-16 ${isSidebarOpen ? 'md:ml-[280px] lg:ml-[320px]' : ''}`}>
+
+        {/* 🟢 Live Order Tracker Inline Widget */}
+        <AnimatePresence>
+          {activeOrders.length > 0 && (
+            <motion.div 
+              initial={{ y: -50, opacity: 0, scale: 0.95 }} 
+              animate={{ y: 0, opacity: 1, scale: 1 }} 
+              exit={{ y: -50, opacity: 0, scale: 0.95 }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="mb-10 w-full"
+            >
+              {activeOrders.slice(0, 1).map(order => {
+                 const steps = ['pending', 'processing', 'ready', 'shipped'];
+                 let currentStepIdx = steps.indexOf(order.status);
+                 if (currentStepIdx === -1) currentStepIdx = 0;
+                 
+                 const progress = ((currentStepIdx + 1) / steps.length) * 100;
+                 
+                 const handleDismiss = (e: React.MouseEvent) => {
+                   e.preventDefault();
+                   dismissedOrderIdsRef.current.add(order._id);
+                   setActiveOrders(prev => prev.filter(o => o._id !== order._id));
+                 };
+
+                 if (order.status === 'delivered') {
+                   return (
+                     <div key={order._id} className="relative w-full bg-emerald-500 text-white rounded-[2rem] p-5 shadow-sm border border-emerald-400 flex flex-col group overflow-hidden">
+                       <button onClick={handleDismiss} className="absolute top-4 right-4 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-black/10 hover:bg-black/20 text-white transition-colors"><X className="w-4 h-4" /></button>
+                       <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full blur-3xl" />
+                       <Link href="/user/profile" className="flex items-center justify-between relative z-10 cursor-pointer">
+                         <div className="flex items-center gap-4">
+                           <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center shadow-inner">
+                             <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+                           </div>
+                           <div>
+                             <h4 className="font-black text-2xl tracking-tight mb-1">Successfully Delivered! 🎉</h4>
+                             <p className="text-sm font-bold text-emerald-50">Hope you enjoy your meal from {order.shop_id?.name}</p>
+                           </div>
+                         </div>
+                       </Link>
+                     </div>
+                   )
+                 }
+
+                 if (order.status === 'cancelled') {
+                   return (
+                     <div key={order._id} className="relative w-full bg-red-500 text-white rounded-[2rem] p-5 shadow-sm border border-red-400 flex flex-col group overflow-hidden">
+                       <button onClick={handleDismiss} className="absolute top-4 right-4 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-black/10 hover:bg-black/20 text-white transition-colors"><X className="w-4 h-4" /></button>
+                       <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full blur-3xl" />
+                       <div className="flex items-center justify-between relative z-10">
+                         <div className="flex items-center gap-4">
+                           <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center shadow-inner">
+                             <X className="w-8 h-8 text-red-500" />
+                           </div>
+                           <div>
+                             <h4 className="font-black text-xl tracking-tight mb-1">Order Cancelled</h4>
+                             <p className="text-sm font-bold text-red-50">Restaurant {order.shop_id?.name} has cancelled this order.</p>
+                           </div>
+                         </div>
+                       </div>
+                     </div>
+                   )
+                 }
+
+                 return (
+                   <div key={order._id} className="relative w-full bg-zinc-900 text-white rounded-[2rem] p-5 shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-zinc-800 flex flex-col group overflow-hidden">
+                     <button onClick={handleDismiss} className="absolute top-4 right-4 z-20 w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-zinc-300 transition-colors"><X className="w-4 h-4" /></button>
+                     <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/10 rounded-full blur-3xl" />
+                     
+                     <Link href="/user/profile" className="flex items-center justify-between mb-4 relative z-10 pr-10 cursor-pointer group-hover:opacity-90">
+                       <div className="flex items-center gap-3">
+                         <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center border border-white/10">
+                           {order.status === 'pending' ? <ShoppingBag className="w-5 h-5 text-zinc-300" /> : 
+                            order.status === 'processing' ? <Flame className="w-5 h-5 text-orange-400 animate-pulse" /> :
+                            order.status === 'ready' ? <PackageOpen className="w-5 h-5 text-blue-400" /> :
+                            <Bike className="w-5 h-5 text-green-400" />}
+                         </div>
+                         <div>
+                           <h4 className="font-black text-lg flex items-center gap-2">
+                             {order.status === 'pending' ? 'Order Received' : 
+                              order.status === 'processing' ? 'Preparing your food' :
+                              order.status === 'ready' ? 'Ready for Pickup' :
+                              'Out for Delivery'} 
+                             <span className="flex h-2 w-2 relative">
+                               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                               <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                             </span>
+                           </h4>
+                           <p className="text-xs font-bold text-zinc-400">{order.shop_id?.name || 'Restaurant'}</p>
+                         </div>
+                       </div>
+                       <div className="text-right hidden sm:block">
+                         <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 block mb-1">Items</span>
+                         <span className="font-bold text-sm bg-white/10 px-2.5 py-1 rounded-lg">{order.orderItems?.length || 0}</span>
+                       </div>
+                     </Link>
+
+                     {order.status === 'processing' && order.preparationTime && (
+                       <div className="mb-4 bg-white/5 border border-white/10 rounded-xl p-3 flex items-center gap-3 z-10">
+                         <div className="bg-orange-500/20 p-2 rounded-lg text-orange-400">
+                           <Clock className="w-4 h-4" />
+                         </div>
+                         <p className="text-sm font-medium text-zinc-200">
+                           ✨ Your food is being prepared. Ready in <span className="font-bold text-white">{order.preparationTime}</span>!
+                         </p>
+                       </div>
+                     )}
+
+                     <div className="relative w-full h-2 bg-white/10 rounded-full overflow-hidden z-10 mb-2">
+                       <motion.div 
+                         initial={{ width: 0 }}
+                         animate={{ width: `${progress}%` }}
+                         transition={{ duration: 1, ease: "easeOut" }}
+                         className={`absolute top-0 left-0 h-full rounded-full ${order.status === 'pending' ? 'bg-zinc-400' : order.status === 'processing' ? 'bg-orange-500' : order.status === 'ready' ? 'bg-blue-500' : 'bg-green-500'}`} 
+                       />
+                     </div>
+                     <div className="flex justify-between text-[10px] font-bold text-zinc-500 uppercase tracking-widest z-10">
+                       <span className={order.status === 'pending' ? 'text-zinc-300' : ''}>Placed</span>
+                       <span className={order.status === 'processing' ? 'text-orange-400' : ''}>Preparing</span>
+                       <span className={order.status === 'ready' ? 'text-blue-400' : ''}>Ready</span>
+                       <span className={order.status === 'shipped' ? 'text-green-400' : ''}>On the way</span>
+                     </div>
+                   </div>
+                 )
+              })}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* The Infinite Food Feed */}
         <div>
@@ -942,110 +1078,7 @@ export default function UserHomePage() {
           </div>
         )}
       </AnimatePresence>
-
-      {/* 🟢 Live Order Tracker Floating Widget */}
-      <AnimatePresence>
-        {activeOrders.length > 0 && (
-          <motion.div 
-            initial={{ y: 150, opacity: 0, scale: 0.9 }} 
-            animate={{ y: 0, opacity: 1, scale: 1 }} 
-            exit={{ y: 150, opacity: 0, scale: 0.9 }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed bottom-6 left-0 right-0 z-50 px-4 md:px-0 flex justify-center pointer-events-none"
-          >
-            {activeOrders.slice(0, 1).map(order => {
-               // derive status progress
-               const steps = ['pending', 'processing', 'ready', 'shipped'];
-               let currentStepIdx = steps.indexOf(order.status);
-               if (currentStepIdx === -1) currentStepIdx = 0; // fallback
-               
-               const progress = ((currentStepIdx + 1) / steps.length) * 100;
-               
-               if (order.status === 'delivered') {
-                 return (
-                   <Link href="/user/profile" key={order._id} className="pointer-events-auto w-full md:w-[500px] bg-emerald-500 text-white rounded-[2rem] p-5 shadow-[0_20px_50px_rgba(16,185,129,0.3)] border border-emerald-400 flex flex-col hover:bg-emerald-600 transition-colors group cursor-pointer overflow-hidden relative">
-                     <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full blur-3xl" />
-                     <div className="flex items-center justify-between relative z-10">
-                       <div className="flex items-center gap-4">
-                         <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center shadow-inner">
-                           <CheckCircle2 className="w-8 h-8 text-emerald-500" />
-                         </div>
-                         <div>
-                           <h4 className="font-black text-2xl tracking-tight mb-1">Successfully Delivered! 🎉</h4>
-                           <p className="text-sm font-bold text-emerald-50">Hope you enjoy your meal from {order.shop_id?.name}</p>
-                         </div>
-                       </div>
-                     </div>
-                   </Link>
-                 )
-               }
-
-               return (
-                 <Link href="/user/profile" key={order._id} className="pointer-events-auto w-full md:w-[500px] bg-zinc-900 text-white rounded-[2rem] p-5 shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-zinc-800 flex flex-col hover:bg-zinc-800 transition-colors group cursor-pointer overflow-hidden relative">
-                   {/* Background Glow */}
-                   <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/10 rounded-full blur-3xl" />
-                   
-                   <div className="flex items-center justify-between mb-4 relative z-10">
-                     <div className="flex items-center gap-3">
-                       <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center border border-white/10">
-                         {order.status === 'pending' ? <ShoppingBag className="w-5 h-5 text-zinc-300" /> : 
-                          order.status === 'processing' ? <Flame className="w-5 h-5 text-orange-400 animate-pulse" /> :
-                          order.status === 'ready' ? <PackageOpen className="w-5 h-5 text-blue-400" /> :
-                          <Bike className="w-5 h-5 text-green-400" />}
-                       </div>
-                       <div>
-                         <h4 className="font-black text-lg flex items-center gap-2">
-                           {order.status === 'pending' ? 'Order Received' : 
-                            order.status === 'processing' ? 'Preparing your food' :
-                            order.status === 'ready' ? 'Ready for Pickup' :
-                            'Out for Delivery'} 
-                           <span className="flex h-2 w-2 relative">
-                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                             <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                           </span>
-                         </h4>
-                         <p className="text-xs font-bold text-zinc-400">{order.shop_id?.name || 'Restaurant'}</p>
-                       </div>
-                     </div>
-                     <div className="text-right">
-                       <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 block mb-1">Items</span>
-                       <span className="font-bold text-sm bg-white/10 px-2.5 py-1 rounded-lg">{order.orderItems?.length || 0}</span>
-                     </div>
-                   </div>
-
-                   {/* Cute Preparation Message */}
-                   {order.status === 'processing' && order.preparationTime && (
-                     <div className="mb-4 bg-white/5 border border-white/10 rounded-xl p-3 flex items-center gap-3 z-10">
-                       <div className="bg-orange-500/20 p-2 rounded-lg text-orange-400">
-                         <Clock className="w-4 h-4" />
-                       </div>
-                       <p className="text-sm font-medium text-zinc-200">
-                         ✨ Your food is being prepared with love. Ready in <span className="font-bold text-white">{order.preparationTime}</span>!
-                       </p>
-                     </div>
-                   )}
-
-                   {/* Progress Bar */}
-                   <div className="relative w-full h-2 bg-white/10 rounded-full overflow-hidden z-10 mb-2">
-                     <motion.div 
-                       initial={{ width: 0 }}
-                       animate={{ width: `${progress}%` }}
-                       transition={{ duration: 1, ease: "easeOut" }}
-                       className={`absolute top-0 left-0 h-full rounded-full ${order.status === 'pending' ? 'bg-zinc-400' : order.status === 'processing' ? 'bg-orange-500' : order.status === 'ready' ? 'bg-blue-500' : 'bg-green-500'}`} 
-                     />
-                   </div>
-                   <div className="flex justify-between text-[10px] font-bold text-zinc-500 uppercase tracking-widest z-10">
-                     <span className={order.status === 'pending' ? 'text-zinc-300' : ''}>Placed</span>
-                     <span className={order.status === 'processing' ? 'text-orange-400' : ''}>Preparing</span>
-                     <span className={order.status === 'ready' ? 'text-blue-400' : ''}>Ready</span>
-                     <span className={order.status === 'shipped' ? 'text-green-400' : ''}>On the way</span>
-                   </div>
-                 </Link>
-               )
-            })}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* End of content */}
     </div>
   );
 }
