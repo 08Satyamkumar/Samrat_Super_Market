@@ -16,7 +16,8 @@ import {
   Sun,
   Moon,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  AlertCircle
 } from "lucide-react";
 
 export default function SellerDashboardLayout({
@@ -34,6 +35,7 @@ export default function SellerDashboardLayout({
   const [shopName, setShopName] = useState("");
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [mounted, setMounted] = useState(false);
+  const [isImpersonated, setIsImpersonated] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -52,6 +54,11 @@ export default function SellerDashboardLayout({
       setShopName(info.shopName);
     } catch (e) {
       console.error("Error parsing seller info", e);
+    }
+
+    const impersonatedFlag = localStorage.getItem("isImpersonated");
+    if (impersonatedFlag === "true") {
+      setIsImpersonated(true);
     }
 
     // Initialize Theme
@@ -79,7 +86,15 @@ export default function SellerDashboardLayout({
   const handleLogout = () => {
     localStorage.removeItem("sellerToken");
     localStorage.removeItem("sellerInfo");
+    localStorage.removeItem("isImpersonated");
     router.push("/seller/login");
+  };
+
+  const handleExitImpersonation = () => {
+    localStorage.removeItem("sellerToken");
+    localStorage.removeItem("sellerInfo");
+    localStorage.removeItem("isImpersonated");
+    router.push("/dashboard/shops");
   };
 
   const navItems = [
@@ -232,6 +247,21 @@ export default function SellerDashboardLayout({
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+        {isImpersonated && (
+          <div className="bg-red-500/90 text-white px-4 py-3 flex flex-col sm:flex-row items-center justify-between z-50 shadow-md sticky top-0 backdrop-blur-md border-b border-red-600/50">
+            <div className="flex items-center gap-2 font-medium mb-2 sm:mb-0">
+              <AlertCircle className="w-5 h-5 shrink-0" />
+              <span>⚠️ You are currently viewing <strong className="font-bold">{shopName}</strong>'s dashboard.</span>
+            </div>
+            <button 
+              onClick={handleExitImpersonation}
+              className="bg-white/20 hover:bg-white/30 text-white px-4 py-1.5 rounded-lg text-sm transition-colors border border-white/20 whitespace-nowrap shadow-sm flex items-center gap-2"
+            >
+              <LogOut className="w-4 h-4" /> Exit to Admin Panel
+            </button>
+          </div>
+        )}
+        
         {/* Top Header for Mobile */}
         <header className="md:hidden sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">

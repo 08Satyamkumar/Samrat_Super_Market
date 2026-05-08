@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, Store, AlertCircle } from "lucide-react";
+import { Check, X, Store, AlertCircle, Eye } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { API_URL } from "@/lib/api";
 
 export default function ShopsPage() {
   const [shops, setShops] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
 
   const fetchShops = async () => {
     try {
@@ -38,6 +40,32 @@ export default function ShopsPage() {
       }
     } catch (error) {
       console.error("Failed to update status", error);
+    }
+  };
+
+  const handleImpersonate = async (id: string) => {
+    try {
+      const res = await fetch(`${API_URL}/api/admin/shops/${id}/impersonate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok) {
+        // Store impersonation data in localStorage
+        localStorage.setItem("sellerToken", data.token);
+        localStorage.setItem("seller", JSON.stringify(data.seller));
+        localStorage.setItem("isImpersonated", "true");
+        
+        // Redirect to seller dashboard
+        router.push("/seller/dashboard");
+      } else {
+        alert(data.message || "Failed to impersonate shop");
+      }
+    } catch (error) {
+      console.error("Error during impersonation", error);
+      alert("Something went wrong");
     }
   };
 
@@ -100,11 +128,11 @@ export default function ShopsPage() {
                         </Badge>
                       </td>
                       <td className="px-6 py-4 text-right space-x-2">
-                        {shop.status === 'pending' && (
+                        {(shop.status === 'pending' || shop.status === 'suspended') && (
                           <button 
                             onClick={() => handleStatusUpdate(shop._id, 'active')}
                             className="p-2 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-white transition-colors border border-emerald-500/30"
-                            title="Approve Shop"
+                            title={shop.status === 'pending' ? "Approve Shop" : "Reactivate Shop"}
                           >
                             <Check className="w-4 h-4" />
                           </button>
@@ -118,6 +146,13 @@ export default function ShopsPage() {
                             <X className="w-4 h-4" />
                           </button>
                         )}
+                        <button 
+                          onClick={() => handleImpersonate(shop._id)}
+                          className="p-2 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500 hover:text-white transition-colors border border-blue-500/30"
+                          title="Login as Seller"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
                       </td>
                     </tr>
                   ))}

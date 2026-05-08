@@ -3,6 +3,8 @@ import Shop from '../models/Shop';
 import Seller from '../models/Seller';
 import Product from '../models/Product';
 import Order from '../models/Order';
+import generateToken from '../utils/generateToken';
+
 // @route   GET /api/admin/shops
 // @access  Private
 export const getShops = async (req: Request, res: Response) => {
@@ -199,5 +201,46 @@ export const createPublicOrder = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error creating order:', error);
     res.status(500).json({ message: 'Server Error' });
+  }
+};
+
+// @desc    Impersonate a seller for super admin
+// @route   POST /api/admin/shops/:id/impersonate
+// @access  Private (Admin)
+export const impersonateSeller = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const shopId = req.params.id;
+    const shop = await Shop.findById(shopId);
+    
+    if (!shop) {
+      res.status(404).json({ message: 'Shop not found' });
+      return;
+    }
+
+    const seller = await Seller.findById(shop.owner_id);
+    if (!seller) {
+      res.status(404).json({ message: 'Seller not found for this shop' });
+      return;
+    }
+
+    // Generate token for the seller
+    const token = generateToken(seller._id.toString(), 'seller');
+
+    res.status(200).json({
+      message: 'Impersonation successful',
+      token,
+      isImpersonated: true,
+      seller: {
+        _id: seller._id,
+        name: seller.name,
+        email: seller.email,
+        shop_id: seller.shop_id,
+        shopName: shop.name,
+      }
+    });
+
+  } catch (error) {
+    console.error('Error in impersonateSeller:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
   }
 };
