@@ -685,6 +685,7 @@ export const getDashboardAnalytics = async (req: SellerRequest, res: Response): 
 
 import fs from 'fs';
 import path from 'path';
+import { uploadToCloudinary } from '../utils/cloudinary';
 
 export const updateProductImage = async (req: SellerRequest, res: Response): Promise<void> => {
   try {
@@ -706,21 +707,8 @@ export const updateProductImage = async (req: SellerRequest, res: Response): Pro
       return;
     }
 
-    // Save image to public/uploads
-    const ext = path.extname(req.file.originalname) || '.jpg';
-    const filename = `product_${id}_${Date.now()}${ext}`;
-    const uploadDir = path.join(__dirname, '../../public/uploads');
-    
-    // Ensure dir exists
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-
-    const uploadPath = path.join(uploadDir, filename);
-    fs.writeFileSync(uploadPath, req.file.buffer);
-
-    const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
-    const imageUrl = `${baseUrl}/uploads/${filename}`;
+    // Upload image to Cloudinary
+    const imageUrl = await uploadToCloudinary(req.file.buffer, 'samrat_market/products');
 
     product.image = imageUrl;
     product.isAIGenerated = false;
@@ -852,21 +840,8 @@ export const updateShopLogo = async (req: SellerRequest, res: Response): Promise
       return;
     }
 
-    // Save image to public/uploads
-    const ext = path.extname(req.file.originalname) || '.jpg';
-    const filename = `shop_logo_${shopId}_${Date.now()}${ext}`;
-    const uploadDir = path.join(__dirname, '../../public/uploads');
-    
-    // Ensure dir exists
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-
-    const uploadPath = path.join(uploadDir, filename);
-    fs.writeFileSync(uploadPath, req.file.buffer);
-
-    const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
-    const imageUrl = `${baseUrl}/uploads/${filename}`;
+    // Upload image to Cloudinary
+    const imageUrl = await uploadToCloudinary(req.file.buffer, 'samrat_market/logos');
 
     shop.logo = imageUrl;
     await shop.save();
@@ -896,21 +871,8 @@ export const updateShopBanner = async (req: SellerRequest, res: Response): Promi
       return;
     }
 
-    // Save image to public/uploads
-    const ext = path.extname(req.file.originalname) || '.jpg';
-    const filename = `shop_banner_${shopId}_${Date.now()}${ext}`;
-    const uploadDir = path.join(__dirname, '../../public/uploads');
-    
-    // Ensure dir exists
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-
-    const uploadPath = path.join(uploadDir, filename);
-    fs.writeFileSync(uploadPath, req.file.buffer);
-
-    const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
-    const imageUrl = `${baseUrl}/uploads/${filename}`;
+    // Upload image to Cloudinary
+    const imageUrl = await uploadToCloudinary(req.file.buffer, 'samrat_market/banners');
 
     shop.bannerImage = imageUrl;
     await shop.save();
