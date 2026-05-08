@@ -1,7 +1,7 @@
 import express from 'express';
 import { authAdmin, getAdminProfile, registerAdmin } from '../controllers/adminController';
 import { protectAdmin, superAdminOnly } from '../middlewares/authMiddleware';
-import { getDashboardStats } from '../controllers/dashboardController';
+import { getDashboardStats, globalSearch } from '../controllers/dashboardController';
 import { getShops, updateShopStatus, impersonateSeller } from '../controllers/shopController';
 
 const router = express.Router();
@@ -19,6 +19,7 @@ router.route('/register').post(protectAdmin, superAdminOnly, registerAdmin);
 
 // Dashboard Routes (Temporarily public for MVP frontend testing)
 router.route('/dashboard').get(getDashboardStats);
+router.route('/search').get(globalSearch);
 
 // Shop Routes (Temporarily public for MVP frontend testing)
 router.route('/shops').get(getShops);

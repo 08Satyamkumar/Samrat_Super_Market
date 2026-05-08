@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -12,8 +12,11 @@ import {
   ShoppingCart, 
   Settings, 
   User, 
-  LogOut 
+  LogOut,
+  Search,
+  Loader2
 } from 'lucide-react';
+import { API_URL } from '@/lib/api';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,6 +34,45 @@ export default function DashboardLayout({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const pathname = usePathname();
+  const searchRef = useRef<HTMLDivElement>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any>(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+
+  useEffect(() => {
+    const fetchResults = async () => {
+      if (!searchQuery || searchQuery.trim() === '') {
+        setSearchResults(null);
+        return;
+      }
+      setIsSearching(true);
+      try {
+        const res = await fetch(`${API_URL}/api/admin/search?q=${encodeURIComponent(searchQuery)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setSearchResults(data);
+        }
+      } catch (error) {
+        console.error("Search failed", error);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    const timer = setTimeout(fetchResults, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setIsSearchFocused(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const navItems = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -75,13 +117,92 @@ export default function DashboardLayout({
       <main className="flex-1 flex flex-col overflow-hidden relative min-w-0">
         {/* Top Navbar */}
         <header className="h-16 border-b bg-white dark:bg-zinc-900/50 backdrop-blur-md flex items-center justify-between px-6 shadow-sm flex-shrink-0">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-1">
             <button 
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-gray-600 dark:text-gray-300"
+              className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors text-gray-600 dark:text-gray-300 flex-shrink-0"
             >
               <Menu className="w-6 h-6" />
             </button>
+
+            {/* Global Search */}
+            <div className="max-w-md w-full ml-2 relative" ref={searchRef}>
+              <div className="relative group">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-blue-500 dark:text-zinc-400 transition-colors" />
+                <input 
+                  type="text" 
+                  placeholder="Search shops, sellers, or orders..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => setIsSearchFocused(true)}
+                  className="w-full bg-gray-100/50 dark:bg-zinc-800/80 border-transparent focus:border-blue-500 focus:bg-white dark:focus:bg-zinc-900 rounded-full pl-10 pr-10 py-2 text-sm outline-none transition-all duration-200 shadow-sm"
+                />
+                {isSearching && (
+                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground animate-spin" />
+                )}
+              </div>
+
+              {/* Search Results Dropdown */}
+              {isSearchFocused && searchQuery && searchResults && (
+                <div className="absolute top-full mt-2 w-full sm:w-[400px] bg-white dark:bg-zinc-900 rounded-xl shadow-xl border border-gray-100 dark:border-zinc-800 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="max-h-[400px] overflow-y-auto py-2">
+                    {/* Shops */}
+                    {searchResults.shops && searchResults.shops.length > 0 && (
+                      <div className="mb-2">
+                        <div className="px-4 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">Shops</div>
+                        {searchResults.shops.map((shop: any) => (
+                          <Link href="/dashboard/shops" key={shop._id} onClick={() => setIsSearchFocused(false)} className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors">
+                            <Store className="w-4 h-4 text-blue-500" />
+                            <div>
+                              <p className="text-sm font-medium text-gray-900 dark:text-zinc-100">{shop.name}</p>
+                              <p className="text-xs text-gray-500">{shop.category || 'General'}</p>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* Sellers */}
+                    {searchResults.sellers && searchResults.sellers.length > 0 && (
+                      <div className="mb-2">
+                        <div className="px-4 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">Sellers</div>
+                        {searchResults.sellers.map((seller: any) => (
+                          <Link href="/dashboard/sellers" key={seller._id} onClick={() => setIsSearchFocused(false)} className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors">
+                            <Users className="w-4 h-4 text-green-500" />
+                            <div>
+                              <p className="text-sm font-medium text-gray-900 dark:text-zinc-100">{seller.name}</p>
+                              <p className="text-xs text-gray-500">{seller.email}</p>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Orders */}
+                    {searchResults.orders && searchResults.orders.length > 0 && (
+                      <div className="mb-2">
+                        <div className="px-4 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">Orders</div>
+                        {searchResults.orders.map((order: any) => (
+                          <Link href="/dashboard/orders" key={order._id} onClick={() => setIsSearchFocused(false)} className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors">
+                            <ShoppingCart className="w-4 h-4 text-orange-500" />
+                            <div>
+                              <p className="text-sm font-medium text-gray-900 dark:text-zinc-100">Order #{order._id.substring(order._id.length - 6).toUpperCase()}</p>
+                              <p className="text-xs text-gray-500">{order.customerName || 'Customer'}</p>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+
+                    {searchResults.shops?.length === 0 && searchResults.sellers?.length === 0 && searchResults.orders?.length === 0 && (
+                      <div className="px-4 py-6 text-center text-gray-500 text-sm">
+                        No results found for "{searchQuery}"
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
           
           <div className="flex items-center gap-4">
