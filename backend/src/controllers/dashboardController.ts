@@ -18,8 +18,8 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     ]);
     const totalRevenue = totalRevenueResult[0]?.total || 0;
 
-    const topShops = await Shop.find().limit(5).sort({ createdAt: -1 });
-    const recentOrders = await Order.find().limit(5).sort({ createdAt: -1 });
+    const topShops = await Shop.find().populate('owner_id', 'name email').limit(5).sort({ createdAt: -1 });
+    const recentOrders = await Order.find().populate('shop_id', 'name').limit(5).sort({ createdAt: -1 });
 
     res.json({
       stats: {

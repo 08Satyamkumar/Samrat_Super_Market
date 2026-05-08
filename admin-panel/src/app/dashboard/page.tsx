@@ -3,13 +3,25 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import { API_URL } from "@/lib/api"
 
 export default function Dashboard() {
   const [loading, setLoading] = useState(true)
+  const [data, setData] = useState<any>(null)
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 1500)
-    return () => clearTimeout(timer)
+    const fetchDashboardData = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/admin/dashboard`)
+        const result = await res.json()
+        setData(result)
+      } catch (error) {
+        console.error("Failed to fetch dashboard data:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchDashboardData()
   }, [])
 
   if (loading) {
@@ -50,8 +62,8 @@ export default function Dashboard() {
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₹45,231.89</div>
-            <p className="text-xs text-muted-foreground">+20.1% from last month</p>
+            <div className="text-2xl font-bold">₹{data?.stats?.totalRevenue?.toLocaleString('en-IN') || 0}</div>
+            <p className="text-xs text-muted-foreground">Platform revenue</p>
           </CardContent>
         </Card>
         <Card>
@@ -59,8 +71,8 @@ export default function Dashboard() {
             <CardTitle className="text-sm font-medium">Active Shops</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+2350</div>
-            <p className="text-xs text-muted-foreground">+180 new this month</p>
+            <div className="text-2xl font-bold">{data?.stats?.activeShops || 0}</div>
+            <p className="text-xs text-muted-foreground">Currently live on app</p>
           </CardContent>
         </Card>
         <Card>
@@ -68,17 +80,17 @@ export default function Dashboard() {
             <CardTitle className="text-sm font-medium">Pending Approvals</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12</div>
+            <div className="text-2xl font-bold">{data?.stats?.pendingShops || 0}</div>
             <p className="text-xs text-muted-foreground">Requires immediate action</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Orders</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+573</div>
-            <p className="text-xs text-muted-foreground">+201 since last hour</p>
+            <div className="text-2xl font-bold">{data?.stats?.totalOrders || 0}</div>
+            <p className="text-xs text-muted-foreground">Total platform orders</p>
           </CardContent>
         </Card>
       </div>
@@ -90,14 +102,26 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-8">
-              {/* Dummy Data */}
-              <div className="flex items-center">
-                <div className="ml-4 space-y-1">
-                  <p className="text-sm font-medium leading-none">Order #4592</p>
-                  <p className="text-sm text-muted-foreground">Nike Air Max 270</p>
+              {data?.recentOrders?.map((order: any) => (
+                <div key={order._id} className="flex items-center">
+                  <div className="ml-4 space-y-1">
+                    <p className="text-sm font-medium leading-none">Order #{order._id.substring(order._id.length - 6).toUpperCase()}</p>
+                    <p className="text-sm text-muted-foreground">{order.shop_id?.name || 'Unknown Shop'}</p>
+                  </div>
+                  <div className="ml-auto font-medium">
+                    <Badge variant="outline" className={
+                      order.status === 'delivered' ? 'text-emerald-500 border-emerald-500/20 bg-emerald-500/10' :
+                      order.status === 'cancelled' ? 'text-red-500 border-red-500/20 bg-red-500/10' :
+                      'text-blue-500 border-blue-500/20 bg-blue-500/10'
+                    }>
+                      {order.status}
+                    </Badge>
+                  </div>
                 </div>
-                <div className="ml-auto font-medium"><Badge variant="outline">Shipped</Badge></div>
-              </div>
+              ))}
+              {(!data?.recentOrders || data.recentOrders.length === 0) && (
+                <p className="text-sm text-muted-foreground text-center">No recent orders</p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -107,14 +131,20 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
              <div className="space-y-8">
-                {/* Dummy Data */}
-              <div className="flex items-center">
-                <div className="ml-4 space-y-1">
-                  <p className="text-sm font-medium leading-none">SneakerHead Delhi</p>
-                  <p className="text-sm text-muted-foreground">owner@sneakerhead.in</p>
+              {data?.topShops?.map((shop: any) => (
+                <div key={shop._id} className="flex items-center">
+                  <div className="ml-4 space-y-1">
+                    <p className="text-sm font-medium leading-none">{shop.name}</p>
+                    <p className="text-sm text-muted-foreground">{shop.owner_id?.email || 'No email'}</p>
+                  </div>
+                  <div className="ml-auto font-medium capitalize text-sm text-muted-foreground">
+                    {shop.category || 'General'}
+                  </div>
                 </div>
-                <div className="ml-auto font-medium">₹12,450</div>
-              </div>
+              ))}
+              {(!data?.topShops || data.topShops.length === 0) && (
+                <p className="text-sm text-muted-foreground text-center">No shops found</p>
+              )}
             </div>
           </CardContent>
         </Card>

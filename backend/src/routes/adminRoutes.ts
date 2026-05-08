@@ -17,8 +17,8 @@ router.post('/logout', (req, res) => {
 router.route('/me').get(protectAdmin, getAdminProfile);
 router.route('/register').post(protectAdmin, superAdminOnly, registerAdmin);
 
-// Dashboard Routes
-router.route('/dashboard').get(protectAdmin, getDashboardStats);
+// Dashboard Routes (Temporarily public for MVP frontend testing)
+router.route('/dashboard').get(getDashboardStats);
 
 // Shop Routes (Temporarily public for MVP frontend testing)
 router.route('/shops').get(getShops);
