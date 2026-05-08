@@ -7,6 +7,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { API_URL } from "@/lib/api";
+import { LoginModal } from "@/components/user/LoginModal";
+import { CheckoutModal } from "@/components/user/CheckoutModal";
 
 export default function UserHomePage() {
   const [products, setProducts] = useState<any[]>([]);
@@ -35,13 +37,6 @@ export default function UserHomePage() {
   
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [otpStep, setOtpStep] = useState(false);
-  const [otpInput, setOtpInput] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<'upi' | 'cash'>('cash');
-  const [orderType, setOrderType] = useState<'delivery' | 'pickup' | 'dine-in'>('delivery');
-  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
-  const [orderSuccess, setOrderSuccess] = useState(false);
 
   // Live Order State
   const [activeOrders, setActiveOrders] = useState<any[]>([]);
@@ -235,113 +230,12 @@ export default function UserHomePage() {
 
   const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-  // --- Auth & Checkout Logic ---
   const handleProceedToCheckout = () => {
     if (cart.length === 0) return;
     if (!userToken) {
       setIsLoginModalOpen(true);
     } else {
       setIsCheckoutOpen(true);
-    }
-  };
-
-  const handleSendOtp = async () => {
-    if (!customerName || !customerPhone) {
-      toast.error("Please enter Name and Phone number");
-      return;
-    }
-    setIsLoggingIn(true);
-    try {
-      const res = await fetch(`${API_URL}/api/users/send-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: customerName, phone: customerPhone })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setOtpStep(true);
-        toast.success(`Mock OTP: ${data.mockOtp}`, { duration: 10000 });
-      } else {
-        toast.error("Failed to send OTP");
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error("Network error");
-    } finally {
-      setIsLoggingIn(false);
-    }
-  };
-
-  const handleVerifyOtp = async () => {
-    if (!otpInput) {
-      toast.error("Please enter OTP");
-      return;
-    }
-    setIsLoggingIn(true);
-    try {
-      const res = await fetch(`${API_URL}/api/users/verify-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: customerPhone, otp: otpInput })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        localStorage.setItem("userToken", data.token);
-        localStorage.setItem("userId", data.user._id);
-        localStorage.setItem("userName", data.user.name);
-        localStorage.setItem("userPhone", data.user.phone);
-        setUserToken(data.token);
-        setUserId(data.user._id);
-        setIsLoginModalOpen(false);
-        setOtpStep(false);
-        setOtpInput("");
-        setIsCheckoutOpen(true);
-        toast.success(`Welcome, ${data.user.name}!`);
-      } else {
-        toast.error("Invalid or expired OTP");
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error("Network error");
-    } finally {
-      setIsLoggingIn(false);
-    }
-  };
-
-  const handlePlaceOrder = async () => {
-    if (!customerName || !customerPhone || cart.length === 0) return;
-    setIsPlacingOrder(true);
-    try {
-      const activeShopId = cart[0].shop_id?._id;
-      const orderData = {
-        userId: userId || null,
-        customerName, 
-        customerPhone,
-        orderItems: cart.map(item => ({ name: item.name, qty: item.quantity, image: item.image, price: item.price, product_id: item._id })),
-        total_amount: totalPrice,
-        paymentMethod: paymentMethod === 'upi' ? 'Online/UPI' : 'Cash on Delivery',
-        orderType
-      };
-
-      const res = await fetch(`${API_URL}/api/shops/${activeShopId}/orders`, {
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify(orderData)
-      });
-      
-      if (res.ok) {
-        setOrderSuccess(true); 
-        setCart([]);
-        setTimeout(() => { 
-          setIsCheckoutOpen(false); 
-          setOrderSuccess(false); 
-          setIsCartOpen(false); 
-        }, 3000);
-      }
-    } catch (error) { 
-      console.error(error); 
-    } finally { 
-      setIsPlacingOrder(false); 
     }
   };
 
@@ -895,184 +789,39 @@ export default function UserHomePage() {
         )}
       </AnimatePresence>
 
-      {/* Login Modal */}
-      <AnimatePresence>
-        {isLoginModalOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-zinc-900/60 backdrop-blur-md" onClick={() => !isLoggingIn && setIsLoginModalOpen(false)} />
-            
-            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="w-full max-w-md rounded-[2.5rem] relative z-10 overflow-hidden bg-white shadow-2xl p-8">
-              <div className="flex items-center justify-between mb-8">
-                <h2 className="text-3xl font-black text-zinc-900 tracking-tighter">Login to Order</h2>
-                <button onClick={() => setIsLoginModalOpen(false)} className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500 hover:text-zinc-900 transition-colors"><X className="w-5 h-5" /></button>
-              </div>
+      <LoginModal 
+        isOpen={isLoginModalOpen} 
+        onClose={() => setIsLoginModalOpen(false)} 
+        onLoginSuccess={(user, token) => {
+          setUserToken(token);
+          setUserId(user._id);
+          setCustomerName(user.name);
+          setCustomerPhone(user.phone);
+          setIsLoginModalOpen(false);
+          setIsCheckoutOpen(true);
+        }} 
+      />
 
-              {!otpStep ? (
-                <>
-                  <div className="space-y-4 mb-8">
-                    <div>
-                      <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest ml-2 mb-2 block">Your Name</label>
-                      <input type="text" placeholder="Rahul Kumar" value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="w-full px-5 py-4 rounded-2xl bg-zinc-50 border border-zinc-200 outline-none focus:border-zinc-400 focus:bg-white transition-all font-bold text-zinc-900" />
-                    </div>
-                    <div>
-                      <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest ml-2 mb-2 block">Phone Number</label>
-                      <input type="tel" placeholder="9876543210" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} className="w-full px-5 py-4 rounded-2xl bg-zinc-50 border border-zinc-200 outline-none focus:border-zinc-400 focus:bg-white transition-all font-bold text-zinc-900" />
-                    </div>
-                  </div>
-                  <button 
-                    onClick={handleSendOtp} disabled={isLoggingIn || !customerName || !customerPhone}
-                    className="w-full py-5 rounded-2xl bg-zinc-900 text-white font-black uppercase tracking-widest text-lg hover:shadow-xl hover:-translate-y-1 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
-                  >
-                    {isLoggingIn ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Send OTP'}
-                  </button>
-                </>
-              ) : (
-                <>
-                  <div className="space-y-4 mb-8">
-                    <div>
-                      <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest ml-2 mb-2 block">Enter OTP</label>
-                      <input type="text" placeholder="123456" value={otpInput} onChange={(e) => setOtpInput(e.target.value)} className="w-full px-5 py-4 rounded-2xl bg-zinc-50 border border-zinc-200 outline-none focus:border-zinc-400 focus:bg-white transition-all font-bold text-zinc-900 tracking-[0.5em] text-center text-xl" maxLength={6} />
-                    </div>
-                  </div>
-                  <button 
-                    onClick={handleVerifyOtp} disabled={isLoggingIn || !otpInput || otpInput.length < 6}
-                    className="w-full py-5 rounded-2xl bg-green-600 text-white font-black uppercase tracking-widest text-lg hover:shadow-xl hover:-translate-y-1 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
-                  >
-                    {isLoggingIn ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Verify & Continue'}
-                  </button>
-                  <button onClick={() => setOtpStep(false)} className="w-full mt-4 text-zinc-500 font-bold text-sm hover:text-zinc-900 transition-colors">
-                    Back to Phone Number
-                  </button>
-                </>
-              )}
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Checkout Flow Modal */}
-      <AnimatePresence>
-        {isCheckoutOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-zinc-900/60 backdrop-blur-md" onClick={() => !isPlacingOrder && !orderSuccess && setIsCheckoutOpen(false)} />
-            
-            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="w-full max-w-md bg-white rounded-[2.5rem] relative z-10 overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-              {(() => {
-                const activeShop = cart.length > 0 ? cart[0].shop_id : null;
-                const shopThemeColors = activeShop?.themeColors || (activeShop?.themeColor ? [activeShop.themeColor] : undefined);
-                
-                return (
-                  <>
-                    <div className="h-2 w-full shrink-0" style={getGradientStyle(shopThemeColors)} />
-                    
-                    <div className="p-8 overflow-y-auto">
-                      {orderSuccess ? (
-                        <div className="flex flex-col items-center justify-center py-10 text-center">
-                          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-24 h-24 rounded-full flex items-center justify-center mb-6 shadow-lg" style={getGradientStyle(shopThemeColors)}>
-                            <CheckCircle2 className="w-12 h-12 text-white" />
-                          </motion.div>
-                          <h3 className="text-3xl font-black mb-3 text-zinc-900 tracking-tighter">Order Placed!</h3>
-                          <p className="text-zinc-500 font-medium leading-relaxed">Your order has been transmitted to the kitchen. Please show this screen at the counter.</p>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="flex items-center justify-between mb-8 shrink-0">
-                            <h2 className="text-3xl font-black text-zinc-900 tracking-tighter">Checkout</h2>
-                            <button onClick={() => setIsCheckoutOpen(false)} className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500 hover:text-zinc-900 transition-colors"><X className="w-5 h-5" /></button>
-                          </div>
-
-                          <div className="bg-zinc-50 rounded-3xl p-5 border border-zinc-100 mb-6 flex items-center gap-4 shrink-0">
-                            <div className="w-14 h-14 rounded-full flex items-center justify-center font-black text-xl text-white shadow-md" style={getGradientStyle(shopThemeColors)}>
-                              {customerName ? customerName.charAt(0).toUpperCase() : 'U'}
-                            </div>
-                            <div className="flex-1">
-                              <p className="text-[10px] text-zinc-400 font-black uppercase tracking-widest mb-1">Delivering To</p>
-                              <p className="font-bold text-zinc-900 text-lg line-clamp-1">{customerName || 'User'}</p>
-                              <p className="text-xs text-zinc-500 line-clamp-1">{customerPhone}</p>
-                            </div>
-                          </div>
-
-                          <div className="mb-8">
-                            <div className="flex justify-between items-end mb-6 bg-zinc-50 p-5 rounded-3xl border border-zinc-100">
-                              <span className="text-zinc-500 font-bold uppercase tracking-widest text-xs">Total to Pay</span>
-                              <span className="text-4xl font-black" style={getTextGradientStyle(shopThemeColors)}>₹{totalPrice}</span>
-                            </div>
-                            
-                            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-4 ml-2">Order Type</span>
-                            <div className="grid grid-cols-3 gap-3 mb-6">
-                              <button onClick={() => setOrderType('delivery')} className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all ${orderType === 'delivery' ? 'bg-zinc-900 border-zinc-900 text-white shadow-md' : 'border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50'}`}>
-                                <Bike className="w-5 h-5 mb-1" />
-                                <span className="font-bold text-xs">Delivery</span>
-                              </button>
-                              <button onClick={() => setOrderType('pickup')} className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all ${orderType === 'pickup' ? 'bg-zinc-900 border-zinc-900 text-white shadow-md' : 'border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50'}`}>
-                                <PackageOpen className="w-5 h-5 mb-1" />
-                                <span className="font-bold text-xs">Pickup</span>
-                              </button>
-                              {activeShop?.allowsDineIn ? (
-                                <button onClick={() => setOrderType('dine-in')} className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all ${orderType === 'dine-in' ? 'bg-zinc-900 border-zinc-900 text-white shadow-md' : 'border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50'}`}>
-                                  <Utensils className="w-5 h-5 mb-1" />
-                                  <span className="font-bold text-xs">Dine-In</span>
-                                </button>
-                              ) : (
-                                <button disabled className="flex flex-col items-center justify-center p-3 rounded-2xl border border-zinc-100 bg-zinc-50 text-zinc-300 cursor-not-allowed">
-                                  <Utensils className="w-5 h-5 mb-1 opacity-50" />
-                                  <span className="font-bold text-xs">No Dine-In</span>
-                                </button>
-                              )}
-                            </div>
-
-                            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-4 ml-2">Select Payment</span>
-                            <div className="grid grid-cols-2 gap-3">
-                              <button onClick={() => setPaymentMethod('cash')} className={`flex flex-col items-center justify-center p-4 rounded-2xl border transition-all ${paymentMethod === 'cash' ? 'bg-zinc-900 border-zinc-900 text-white shadow-md' : 'border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50'}`}>
-                                <span className="font-bold">Cash</span>
-                                <span className="text-[10px] mt-1 opacity-70">Pay at counter</span>
-                              </button>
-                              
-                              {activeShop?.upiId ? (
-                                <button onClick={() => setPaymentMethod('upi')} className={`flex flex-col items-center justify-center p-4 rounded-2xl border transition-all ${paymentMethod === 'upi' ? 'bg-zinc-900 border-zinc-900 text-white shadow-md' : 'border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50'}`}>
-                                  <span className="font-bold">UPI</span>
-                                  <span className="text-[10px] mt-1 opacity-70">Scan QR</span>
-                                </button>
-                              ) : (
-                                <button disabled className="flex flex-col items-center justify-center p-4 rounded-2xl border border-zinc-100 bg-zinc-50 text-zinc-300 cursor-not-allowed">
-                                  <span className="font-bold">UPI</span>
-                                  <span className="text-[10px] mt-1">Not Available</span>
-                                </button>
-                              )}
-                            </div>
-
-                            <AnimatePresence>
-                              {paymentMethod === 'upi' && activeShop?.upiId && (
-                                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-                                  <div className="bg-zinc-50 border border-zinc-100 rounded-3xl p-6 flex flex-col items-center text-center mt-4">
-                                    <div className="p-3 bg-white rounded-2xl shadow-sm border border-zinc-200 mb-4">
-                                      <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=${activeShop.upiId}&pn=${encodeURIComponent(activeShop.name)}`} alt="UPI QR Code" className="w-32 h-32" />
-                                    </div>
-                                    <p className="font-mono font-bold text-zinc-900 bg-white border border-zinc-200 px-4 py-2 rounded-xl shadow-sm">{activeShop.upiId}</p>
-                                    <p className="text-[10px] text-zinc-400 uppercase tracking-widest mt-4 font-bold">Scan using PhonePe, GPay or Paytm</p>
-                                  </div>
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
-                          </div>
-
-                          <button 
-                            onClick={handlePlaceOrder} disabled={isPlacingOrder || !customerName || !customerPhone}
-                            className="w-full shrink-0 py-5 rounded-2xl text-white font-black uppercase tracking-widest text-lg hover:shadow-xl hover:-translate-y-1 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
-                            style={getGradientStyle(shopThemeColors)}
-                          >
-                            {isPlacingOrder ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Place Order Now'}
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </>
-                );
-              })()}
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      {isCheckoutOpen && cart.length > 0 && (
+        <CheckoutModal 
+          isOpen={isCheckoutOpen}
+          onClose={() => setIsCheckoutOpen(false)}
+          cart={cart}
+          totalPrice={totalPrice}
+          customerName={customerName}
+          customerPhone={customerPhone}
+          userId={userId}
+          shopInfo={cart[0].shop_id}
+          onOrderSuccess={() => {
+            setCart([]);
+            setIsCheckoutOpen(false);
+            setIsCartOpen(false);
+          }}
+          primaryColor={cart[0].shop_id?.themeColors?.[0]}
+          gradientStyle={getGradientStyle(cart[0].shop_id?.themeColors)}
+          textGradientStyle={getTextGradientStyle(cart[0].shop_id?.themeColors)}
+        />
+      )}
       {/* End of content */}
     </div>
   );
