@@ -645,9 +645,9 @@ export const getDashboardAnalytics = async (req: SellerRequest, res: Response): 
     }
     const shopId = req.seller.shop_id;
     
-    // 1. Total Revenue (sum of all paid orders)
+    // 1. Total Revenue (sum of all delivered orders)
     const revenueResult = await Order.aggregate([
-      { $match: { shop_id: shopId, isPaid: true } },
+      { $match: { shop_id: shopId, status: 'delivered' } },
       { $group: { _id: null, total: { $sum: '$total_amount' } } }
     ]);
     const totalRevenue = revenueResult.length > 0 ? revenueResult[0].total : 0;
