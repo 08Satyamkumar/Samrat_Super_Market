@@ -17,7 +17,9 @@ import {
   Moon,
   ChevronLeft,
   ChevronRight,
-  AlertCircle
+  AlertCircle,
+  Bell,
+  CheckCircle2
 } from "lucide-react";
 
 export default function SellerDashboardLayout({
@@ -36,6 +38,8 @@ export default function SellerDashboardLayout({
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [mounted, setMounted] = useState(false);
   const [isImpersonated, setIsImpersonated] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [showNotificationAudio, setShowNotificationAudio] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -71,6 +75,57 @@ export default function SellerDashboardLayout({
       document.documentElement.classList.add("dark");
     }
   }, [router]);
+
+  // Polling for Notifications
+  useEffect(() => {
+    const token = localStorage.getItem("sellerToken");
+    if (!token) return;
+
+    const fetchNotifications = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/seller/notifications`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          // If we have more notifications than before, it means a new one arrived
+          if (data.length > notifications.length && notifications.length > 0) {
+            // New order received!
+            try {
+              const audio = new Audio('/notification.mp3');
+              audio.play().catch(e => console.log('Audio play failed', e));
+            } catch (e) {}
+          }
+          setNotifications(data);
+        }
+      } catch (error) {
+        console.error("Error fetching notifications", error);
+      }
+    };
+
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 10000); // Check every 10 seconds
+    return () => clearInterval(interval);
+  }, [notifications.length]);
+
+  const dismissNotification = async (id: string) => {
+    const token = localStorage.getItem("sellerToken");
+    if (!token) return;
+
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/seller/notifications/${id}/dismiss`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      setNotifications(prev => prev.filter(n => n._id !== id));
+    } catch (error) {
+      console.error("Error dismissing notification", error);
+    }
+  };
 
   const toggleTheme = () => {
     const newTheme = theme === "dark" ? "light" : "dark";
@@ -115,6 +170,52 @@ export default function SellerDashboardLayout({
           onClick={() => setIsMobileSidebarOpen(false)}
         />
       )}
+
+      {/* Notification Banner */}
+      <AnimatePresence>
+        {notifications.length > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, y: -50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -50, scale: 0.95 }}
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-md bg-gradient-to-r from-violet-600 to-indigo-600 rounded-2xl shadow-2xl p-4 flex items-start gap-4 border border-white/20"
+          >
+            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+              <Bell className="w-5 h-5 text-white animate-pulse" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-white font-bold text-sm">New Order Arrived! 🎉</h3>
+              <p className="text-white/80 text-xs mt-1">
+                {notifications[0].customerName} just placed an order for ₹{notifications[0].total_amount.toFixed(2)}.
+              </p>
+              <div className="mt-3 flex items-center gap-2">
+                <Link href="/seller/dashboard/orders" onClick={() => dismissNotification(notifications[0]._id)}>
+                  <button className="bg-white text-violet-600 px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-white/90 transition-colors">
+                    View Order
+                  </button>
+                </Link>
+                <button 
+                  onClick={() => dismissNotification(notifications[0]._id)}
+                  className="bg-white/20 text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-white/30 transition-colors"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+            <button 
+              onClick={() => dismissNotification(notifications[0]._id)}
+              className="absolute top-3 right-3 text-white/60 hover:text-white transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            {notifications.length > 1 && (
+              <div className="absolute -bottom-2 -right-2 bg-rose-500 text-white text-[10px] font-black w-6 h-6 rounded-full flex items-center justify-center border-2 border-background shadow-lg">
+                +{notifications.length - 1}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Sidebar Wrapper */}
       <div className={`fixed inset-y-0 left-0 z-50 md:relative md:translate-x-0 transition-transform duration-300 ease-in-out ${isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>

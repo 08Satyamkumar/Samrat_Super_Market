@@ -74,6 +74,10 @@ const orderSchema = new mongoose.Schema(
       enum: ['delivery', 'pickup', 'dine-in'],
       default: 'delivery',
     },
+    isSellerNotified: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

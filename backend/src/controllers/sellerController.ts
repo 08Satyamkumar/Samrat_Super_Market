@@ -986,3 +986,51 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
+
+export const getUnreadNotifications = async (req: SellerRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.seller) {
+      res.status(401).json({ message: 'Not authorized' });
+      return;
+    }
+    const shopId = req.seller.shop_id;
+
+    const unreadOrders = await Order.find({
+      shop_id: shopId,
+      status: 'pending',
+      isSellerNotified: false
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json(unreadOrders);
+  } catch (error) {
+    console.error('Error in getUnreadNotifications:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
+export const dismissNotification = async (req: SellerRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.seller) {
+      res.status(401).json({ message: 'Not authorized' });
+      return;
+    }
+    const { id } = req.params;
+    const shopId = req.seller.shop_id;
+
+    const order = await Order.findOneAndUpdate(
+      { _id: id, shop_id: shopId },
+      { isSellerNotified: true },
+      { new: true }
+    );
+
+    if (!order) {
+      res.status(404).json({ message: 'Order not found' });
+      return;
+    }
+
+    res.status(200).json({ message: 'Notification dismissed' });
+  } catch (error) {
+    console.error('Error in dismissNotification:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
