@@ -119,8 +119,47 @@ export const getAllPublicProducts = async (req: Request, res: Response): Promise
 // @access  Public
 export const getAllActiveShops = async (req: Request, res: Response): Promise<void> => {
   try {
-    const shops = await Shop.find({ status: 'active' })
-      .select('name logo bannerImage themeColors themeColor isOpen estimatedDeliveryTime shopSlug')
+    const { lat, lng, type, radius } = req.query;
+
+    if (lat && lng) {
+      const radiusInMeters = radius ? parseInt(radius as string) * 1000 : 15000; // default 15km
+      const geoNearQuery: any[] = [
+        {
+          $geoNear: {
+            near: { type: 'Point', coordinates: [parseFloat(lng as string), parseFloat(lat as string)] },
+            distanceField: 'shopDistance',
+            maxDistance: radiusInMeters,
+            spherical: true,
+            query: { status: 'active' }
+          }
+        }
+      ];
+
+      if (type && type !== 'all' && type !== 'near_me') {
+        geoNearQuery[0].$geoNear.query.shopType = type;
+      }
+
+      // Add project to only return necessary fields
+      geoNearQuery.push({
+        $project: {
+          name: 1, logo: 1, bannerImage: 1, themeColors: 1, themeColor: 1,
+          isOpen: 1, estimatedDeliveryTime: 1, shopSlug: 1, shopDistance: 1, shopType: 1
+        }
+      });
+
+      const shops = await Shop.aggregate(geoNearQuery);
+      res.status(200).json(shops);
+      return;
+    }
+
+    // Fallback if no location provided
+    const query: any = { status: 'active' };
+    if (type && type !== 'all' && type !== 'near_me') {
+      query.shopType = type;
+    }
+
+    const shops = await Shop.find(query)
+      .select('name logo bannerImage themeColors themeColor isOpen estimatedDeliveryTime shopSlug shopType')
       .sort({ createdAt: -1 });
     res.status(200).json(shops);
   } catch (error) {

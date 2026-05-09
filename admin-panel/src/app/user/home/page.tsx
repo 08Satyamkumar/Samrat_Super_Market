@@ -25,6 +25,7 @@ export default function UserHomePage() {
   // Location & Advanced Filters
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   const [shopCategoryFilter, setShopCategoryFilter] = useState('all');
+  const [radiusFilter, setRadiusFilter] = useState(5); // Default 5km
   const [isFetchingLocation, setIsFetchingLocation] = useState(false);
 
   // Cart State
@@ -105,22 +106,22 @@ export default function UserHomePage() {
     fetchData();
   }, []);
 
-  const fetchData = async (lat?: number, lng?: number, type: string = 'all') => {
+  const fetchData = async (lat?: number, lng?: number, type: string = 'all', radius: number = radiusFilter) => {
     setLoading(true);
     try {
-      // Fetch Products with location/type
-      let url = `${API_URL}/api/shops/products/all?type=${type}`;
-      if (lat && lng) {
-        url += `&lat=${lat}&lng=${lng}`;
-      }
-      const prodRes = await fetch(url);
+      // Fetch Products with location/type (for the infinite feed)
+      let prodUrl = `${API_URL}/api/shops/products/all?type=${type}`;
+      if (lat && lng) prodUrl += `&lat=${lat}&lng=${lng}`;
+      const prodRes = await fetch(prodUrl);
       if (prodRes.ok) {
         const prodData = await prodRes.json();
         setProducts(prodData);
       }
 
-      // Fetch Shops for Sidebar
-      const shopRes = await fetch(`${API_URL}/api/shops`);
+      // Fetch Shops for Sidebar and Near Me Feed
+      let shopUrl = `${API_URL}/api/shops?type=${type}`;
+      if (lat && lng) shopUrl += `&lat=${lat}&lng=${lng}&radius=${radius}`;
+      const shopRes = await fetch(shopUrl);
       if (shopRes.ok) {
         const shopData = await shopRes.json();
         setShops(shopData);
@@ -148,8 +149,8 @@ export default function UserHomePage() {
           const lng = position.coords.longitude;
           setUserLocation({ lat, lng });
           setIsFetchingLocation(false);
-          toast.success("Location updated! Showing nearby places.");
-          fetchData(lat, lng, 'near_me');
+          toast.success("Location updated! Showing nearby shops.");
+          fetchData(lat, lng, 'near_me', radiusFilter);
         },
         (error) => {
           console.error(error);
@@ -160,7 +161,14 @@ export default function UserHomePage() {
         }
       );
     } else {
-      fetchData(userLocation?.lat, userLocation?.lng, category);
+      fetchData(userLocation?.lat, userLocation?.lng, category, radiusFilter);
+    }
+  };
+
+  const handleRadiusChange = (newRadius: number) => {
+    setRadiusFilter(newRadius);
+    if (userLocation?.lat && userLocation?.lng) {
+      fetchData(userLocation.lat, userLocation.lng, shopCategoryFilter, newRadius);
     }
   };
 
@@ -626,6 +634,31 @@ export default function UserHomePage() {
             </button>
           </div>
 
+          {/* Radius Filter UI for Near Me */}
+          <AnimatePresence>
+            {shopCategoryFilter === 'near_me' && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }} 
+                animate={{ opacity: 1, height: 'auto' }} 
+                exit={{ opacity: 0, height: 0 }}
+                className="mb-8"
+              >
+                <div className="flex items-center gap-3 overflow-x-auto hide-scrollbar pb-2">
+                  <span className="text-xs font-black text-zinc-400 uppercase tracking-widest shrink-0">Radius:</span>
+                  {[5, 10, 15, 20].map(radius => (
+                    <button 
+                      key={radius}
+                      onClick={() => handleRadiusChange(radius)}
+                      className={`flex-shrink-0 px-4 py-2 rounded-xl font-bold text-xs transition-all border ${radiusFilter === radius ? 'bg-zinc-900 text-white border-zinc-900 shadow-md' : 'bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50'}`}
+                    >
+                      Within {radius} km
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {loading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20">
               {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
@@ -656,6 +689,59 @@ export default function UserHomePage() {
                 </div>
               ))}
             </div>
+          ) : shopCategoryFilter !== 'all' ? (
+            shops.length === 0 ? (
+              <div className="text-center py-20 bg-white rounded-[2rem] border border-zinc-100 shadow-sm">
+                <Store className="w-12 h-12 text-zinc-200 mx-auto mb-4" />
+                <h3 className="text-2xl font-black text-zinc-400 mb-2">No Shops Found</h3>
+                <p className="text-zinc-500 font-medium">Try increasing the radius or changing the category.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20">
+                {shops.map(shop => {
+                  const shopUrl = `/shop/${shop.shopSlug || shop.name.toLowerCase().replace(/\s+/g, '-')}`;
+                  return (
+                    <Link href={shopUrl} key={shop._id} className="group bg-white rounded-[2rem] overflow-hidden flex flex-col h-full shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] hover:-translate-y-1 transition-all duration-500 border border-white relative cursor-pointer">
+                      <div className="relative w-full aspect-[4/3] overflow-hidden bg-zinc-50">
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10"></div>
+                        <img 
+                          src={shop.bannerImage || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=500&q=80"} 
+                          alt={shop.name} 
+                          className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-110" 
+                        />
+                        <div className="absolute top-4 right-4 z-20 bg-white/20 backdrop-blur-md border border-white/30 text-white text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5">
+                          <Star className="w-3 h-3 fill-white" /> 4.9
+                        </div>
+                        {shop.shopDistance !== undefined && (
+                          <div className="absolute top-4 left-4 z-20 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-lg">
+                            <MapPin className="w-3 h-3" /> {(shop.shopDistance / 1000).toFixed(1)} km
+                          </div>
+                        )}
+                        <div className="absolute bottom-6 left-6 z-20 flex items-end gap-4">
+                          <div className="w-16 h-16 rounded-[1.25rem] overflow-hidden border-2 border-white shadow-xl bg-white" style={getGradientStyle(shop.themeColors || [shop.themeColor])}>
+                            {shop.logo && shop.logo !== 'https://via.placeholder.com/150' ? (
+                              <img src={shop.logo} alt={shop.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center font-black text-white text-2xl">{shop.name.charAt(0)}</div>
+                            )}
+                          </div>
+                          <div className="pb-1 text-white">
+                            <h3 className="text-xl font-black tracking-tight drop-shadow-md">{shop.name}</h3>
+                            <span className="text-xs font-bold text-white/80 uppercase tracking-widest bg-black/30 backdrop-blur-md px-2 py-0.5 rounded-md mt-1 inline-block border border-white/10">{shop.shopType || 'Restaurant'}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="p-5 bg-white">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="font-bold text-zinc-500 flex items-center gap-1.5"><Clock className="w-4 h-4 text-orange-500" /> {shop.estimatedDeliveryTime || '30 mins'}</span>
+                          <span className="font-bold text-green-600 flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4" /> Open Now</span>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )
           ) : filteredProducts.length === 0 ? (
             <div className="text-center py-20 bg-white rounded-[2rem] border border-zinc-100 shadow-sm">
               <Utensils className="w-12 h-12 text-zinc-200 mx-auto mb-4" />
