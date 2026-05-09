@@ -17,8 +17,10 @@ export default function UserHomePage() {
   
   // Sidebar / Drawer State
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [activeFilter, setActiveFilter] = useState("all"); // vegan, non-veg
+  const [activeFilter, setActiveFilter] = useState("all"); // veg, non-veg
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortOrder, setSortOrder] = useState("default"); // default, low_to_high, high_to_low
+  const [selectedCategory, setSelectedCategory] = useState("all");
   
   // Location & Advanced Filters
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
@@ -187,6 +189,8 @@ export default function UserHomePage() {
     return nonVegKeywords.some(keyword => name.toLowerCase().includes(keyword));
   };
 
+  const categories = ["all", ...Array.from(new Set(products.map(p => p.category || 'general'))).filter(c => c !== 'general')];
+
   const filteredProducts = products.filter(p => {
     let matchesFilter = true;
     if (activeFilter === 'veg') matchesFilter = !isNonVeg(p.name);
@@ -197,8 +201,17 @@ export default function UserHomePage() {
       matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                       (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()));
     }
+
+    let matchesCategory = true;
+    if (selectedCategory !== 'all') {
+      matchesCategory = (p.category || 'general') === selectedCategory;
+    }
     
-    return matchesFilter && matchesSearch;
+    return matchesFilter && matchesSearch && matchesCategory;
+  }).sort((a, b) => {
+    if (sortOrder === 'low_to_high') return a.price - b.price;
+    if (sortOrder === 'high_to_low') return b.price - a.price;
+    return 0;
   });
 
   // --- Cart Logic ---
@@ -285,72 +298,105 @@ export default function UserHomePage() {
       {/* spacer for navbar */}
       <div className="h-16 shrink-0 w-full md:hidden" />
 
-      {/* 📍 DESKTOP SIDEBAR / MOBILE DRAWER */}
+      {/* 📍 DESKTOP SIDEBAR / MOBILE BOTTOM SHEET */}
       <AnimatePresence>
         {isSidebarOpen && (
           <>
             {/* Mobile Backdrop */}
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} 
-              className="md:hidden fixed inset-0 bg-zinc-900/60 backdrop-blur-sm z-50"
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 md:hidden"
+              onClick={() => setIsSidebarOpen(false)}
+            />
+            {/* Desktop Backdrop (Optional but good for focus) */}
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} 
+              className="hidden md:block fixed inset-0 bg-transparent z-20"
               onClick={() => setIsSidebarOpen(false)}
             />
             
             <motion.aside 
-              initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }} transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed top-[72px] left-0 bottom-0 w-[280px] lg:w-[320px] bg-white/60 backdrop-blur-3xl border-r border-white/50 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-50 md:z-30 overflow-y-auto flex flex-col shrink-0"
+              initial={{ y: "100%", x: 0 }} 
+              animate={{ y: 0, x: 0 }} 
+              exit={{ y: "100%", x: 0 }} 
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="fixed bottom-0 left-0 right-0 h-[85vh] bg-white/90 backdrop-blur-3xl border-t border-white/50 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-50 rounded-t-[2rem] overflow-hidden flex flex-col md:top-[72px] md:bottom-0 md:left-0 md:right-auto md:w-[320px] md:h-auto md:rounded-none md:border-r md:border-t-0 md:shadow-[4px_0_24px_rgba(0,0,0,0.02)] md:initial-x-[-100%] md:animate-x-0 md:exit-x-[-100%] md:initial-y-0 md:animate-y-0 md:exit-y-0"
             >
-              <div className="p-6">
+              {/* Mobile Drag Handle */}
+              <div className="w-full h-1.5 flex justify-center mt-3 mb-2 md:hidden">
+                <div className="w-12 h-1.5 bg-zinc-300 rounded-full" />
+              </div>
+
+              <div className="p-6 overflow-y-auto flex-1 hide-scrollbar">
                 
-                {/* User Profile Summary - VIP Pass */}
-                <Link href="/user/profile" className="hidden md:block mb-10 bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-[1.5rem] p-5 shadow-[0_10px_30px_rgba(0,0,0,0.15)] hover:shadow-[0_15px_40px_rgba(0,0,0,0.2)] transition-all hover:-translate-y-1 relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-10 -mt-10 blur-2xl group-hover:bg-white/10 transition-colors"></div>
-                  <div className="flex items-center gap-4 relative z-10">
-                    <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center text-white backdrop-blur-md border border-white/10">
-                      <User className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <h3 className="font-black text-white text-base leading-tight">My Account</h3>
-                      <p className="text-xs text-zinc-400 font-bold mt-1">Orders & Profile</p>
+                {/* Advanced Filters Section */}
+                <div className="mb-8">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-black tracking-tight text-zinc-900 flex items-center gap-2">
+                      Filters
+                    </h3>
+                    <button onClick={() => setIsSidebarOpen(false)} className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500 hover:bg-zinc-200 md:hidden">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Price Sort */}
+                  <div className="mb-6">
+                    <h4 className="text-[10px] font-black tracking-widest uppercase text-zinc-400 mb-3">Sort By Price</h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button onClick={() => setSortOrder('default')} className={`py-2.5 rounded-xl font-bold text-xs transition-all border ${sortOrder === 'default' ? 'bg-zinc-900 text-white border-zinc-900 shadow-md' : 'bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50'}`}>Recommended</button>
+                      <button onClick={() => setSortOrder('low_to_high')} className={`py-2.5 rounded-xl font-bold text-xs transition-all border ${sortOrder === 'low_to_high' ? 'bg-violet-600 text-white border-violet-600 shadow-md' : 'bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50'}`}>Low to High</button>
+                      <button onClick={() => setSortOrder('high_to_low')} className={`col-span-2 py-2.5 rounded-xl font-bold text-xs transition-all border ${sortOrder === 'high_to_low' ? 'bg-violet-600 text-white border-violet-600 shadow-md' : 'bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50'}`}>High to Low</button>
                     </div>
                   </div>
-                </Link>
 
-                {/* Filters */}
-                <div className="mb-10">
-                  <h3 className="text-[10px] font-black tracking-widest uppercase text-zinc-400 mb-4 flex items-center gap-2">
-                    <SlidersHorizontal className="w-3 h-3" /> Explore Menu
-                  </h3>
-                  <div className="flex flex-col gap-2">
-                    <button onClick={() => setActiveFilter('all')} className={`w-full text-left px-5 py-3.5 rounded-2xl font-bold transition-all text-sm flex items-center gap-3 ${activeFilter === 'all' ? 'bg-white shadow-[0_8px_30px_rgb(0,0,0,0.08)] text-zinc-900' : 'text-zinc-500 hover:bg-white/50'}`}>
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${activeFilter === 'all' ? 'bg-zinc-100 text-zinc-900' : 'bg-transparent text-zinc-400'}`}><Utensils className="w-4 h-4" /></div>
-                      All Delicacies
-                    </button>
-                    <button onClick={() => setActiveFilter('veg')} className={`w-full text-left px-5 py-3.5 rounded-2xl font-bold transition-all text-sm flex items-center gap-3 ${activeFilter === 'veg' ? 'bg-white shadow-[0_8px_30px_rgb(0,0,0,0.08)] text-green-600' : 'text-zinc-500 hover:bg-white/50'}`}>
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${activeFilter === 'veg' ? 'bg-green-50 text-green-600' : 'bg-transparent text-zinc-400'}`}>🌱</div>
-                      Pure Veg Only
-                    </button>
-                    <button onClick={() => setActiveFilter('non-veg')} className={`w-full text-left px-5 py-3.5 rounded-2xl font-bold transition-all text-sm flex items-center gap-3 ${activeFilter === 'non-veg' ? 'bg-white shadow-[0_8px_30px_rgb(0,0,0,0.08)] text-red-600' : 'text-zinc-500 hover:bg-white/50'}`}>
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${activeFilter === 'non-veg' ? 'bg-red-50 text-red-600' : 'bg-transparent text-zinc-400'}`}>🍗</div>
-                      Non-Veg Specials
-                    </button>
+                  {/* Dietary Options (Premium Chips) */}
+                  <div className="mb-6">
+                    <h4 className="text-[10px] font-black tracking-widest uppercase text-zinc-400 mb-3">Dietary</h4>
+                    <div className="flex flex-wrap gap-2">
+                      <button onClick={() => setActiveFilter('all')} className={`px-4 py-2 rounded-xl font-bold text-xs transition-all flex items-center gap-2 ${activeFilter === 'all' ? 'bg-zinc-900 text-white shadow-md' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'}`}>
+                        All
+                      </button>
+                      <button onClick={() => setActiveFilter('veg')} className={`px-4 py-2 rounded-xl font-bold text-xs transition-all flex items-center gap-2 ${activeFilter === 'veg' ? 'bg-green-500 text-white shadow-md' : 'bg-green-50 text-green-700 hover:bg-green-100'}`}>
+                        <div className={`w-2 h-2 rounded-full ${activeFilter === 'veg' ? 'bg-white' : 'bg-green-500'}`} /> Pure Veg
+                      </button>
+                      <button onClick={() => setActiveFilter('non-veg')} className={`px-4 py-2 rounded-xl font-bold text-xs transition-all flex items-center gap-2 ${activeFilter === 'non-veg' ? 'bg-red-500 text-white shadow-md' : 'bg-red-50 text-red-700 hover:bg-red-100'}`}>
+                        <div className={`w-2 h-2 rounded-full ${activeFilter === 'non-veg' ? 'bg-white' : 'bg-red-500'}`} /> Non-Veg
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Categories */}
+                  <div className="mb-6">
+                    <h4 className="text-[10px] font-black tracking-widest uppercase text-zinc-400 mb-3">Categories</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {categories.map(cat => (
+                        <button 
+                          key={cat} 
+                          onClick={() => setSelectedCategory(cat)}
+                          className={`px-4 py-2.5 rounded-xl font-bold text-xs transition-all capitalize border ${selectedCategory === cat ? 'bg-orange-500 text-white border-orange-500 shadow-[0_8px_20px_rgba(249,115,22,0.3)]' : 'bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50'}`}
+                        >
+                          {cat === 'all' ? '🍽️ All Items' : cat}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
-                {/* Restaurants Near You */}
+                {/* Premium Live Kitchens */}
                 <div>
-                  <h3 className="text-[10px] font-black tracking-widest uppercase text-zinc-400 mb-4 flex items-center gap-2">
-                    <Store className="w-3 h-3" /> Live Kitchens
+                  <h3 className="text-xl font-black tracking-tight text-zinc-900 flex items-center gap-2 mb-4">
+                    Live Kitchens
                   </h3>
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-3">
                     {shops.map(shop => (
-                      <Link href={`/shop/${shop.shopSlug || shop.name.toLowerCase().replace(/\s+/g, '-')}`} key={shop._id} className="flex items-center gap-3 group p-2 -ml-2 rounded-2xl hover:bg-white/80 hover:shadow-sm transition-all cursor-pointer">
+                      <Link href={`/shop/${shop.shopSlug || shop.name.toLowerCase().replace(/\s+/g, '-')}`} key={shop._id} className="flex items-center gap-4 group p-3 rounded-2xl bg-white border border-zinc-100 shadow-sm hover:shadow-md hover:border-violet-200 transition-all cursor-pointer">
                         <div className="relative">
-                          <div className="w-12 h-12 rounded-[1rem] overflow-hidden shadow-sm border border-white/50 group-hover:scale-105 transition-transform duration-300" style={getGradientStyle(shop.themeColors || [shop.themeColor])}>
+                          <div className="w-14 h-14 rounded-[1.25rem] overflow-hidden shadow-sm group-hover:scale-105 transition-transform duration-300" style={getGradientStyle(shop.themeColors || [shop.themeColor])}>
                             {shop.logo && shop.logo !== 'https://via.placeholder.com/150' ? (
                               <img src={shop.logo} alt={shop.name} className="w-full h-full object-cover" />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center font-black text-white text-lg">{shop.name.charAt(0)}</div>
+                              <div className="w-full h-full flex items-center justify-center font-black text-white text-xl">{shop.name.charAt(0)}</div>
                             )}
                           </div>
                           <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center shadow-sm">
@@ -358,10 +404,10 @@ export default function UserHomePage() {
                           </div>
                         </div>
                         <div className="flex-1 overflow-hidden">
-                          <h4 className="font-bold text-zinc-900 text-sm truncate group-hover:text-zinc-600 transition-colors">{shop.name}</h4>
-                          <div className="flex items-center justify-between mt-1">
-                            <span className="flex items-center gap-1 text-[10px] font-black text-green-700 bg-green-50 border border-green-100 px-1.5 py-0.5 rounded-md uppercase tracking-widest"><Star className="w-2.5 h-2.5 fill-green-700" /> 4.9</span>
-                            <span className="text-[10px] font-bold text-zinc-400 truncate">{shop.estimatedDeliveryTime || '30m'}</span>
+                          <h4 className="font-bold text-zinc-900 text-base truncate group-hover:text-violet-600 transition-colors">{shop.name}</h4>
+                          <div className="flex items-center gap-3 mt-1.5">
+                            <span className="flex items-center gap-1 text-[10px] font-black text-white bg-green-600 px-1.5 py-0.5 rounded-md uppercase tracking-widest"><Star className="w-2.5 h-2.5 fill-white" /> 4.9</span>
+                            <span className="text-xs font-bold text-zinc-500 flex items-center gap-1"><Clock className="w-3 h-3" /> {shop.estimatedDeliveryTime || '30m'}</span>
                           </div>
                         </div>
                       </Link>
@@ -369,6 +415,13 @@ export default function UserHomePage() {
                   </div>
                 </div>
 
+              </div>
+              
+              {/* View Results Button (Mobile Only) */}
+              <div className="p-4 border-t border-zinc-100 bg-white md:hidden">
+                <button onClick={() => setIsSidebarOpen(false)} className="w-full py-4 bg-zinc-900 hover:bg-zinc-800 text-white rounded-2xl font-black tracking-wide shadow-[0_8px_30px_rgba(0,0,0,0.15)] transition-all">
+                  Show Results ({filteredProducts.length})
+                </button>
               </div>
             </motion.aside>
           </>
