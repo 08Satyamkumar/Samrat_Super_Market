@@ -145,15 +145,6 @@ export default function PublicShopPage() {
     }
   };
 
-  const handleProceedToCheckout = () => {
-    setIsCartOpen(false);
-    if (userToken) {
-      setIsCheckoutOpen(true);
-    } else {
-      setIsLoginModalOpen(true);
-    }
-  };
-
   if (!mounted || loading) return (
     <div className="min-h-screen bg-[#FDFBF7] flex items-center justify-center">
       <Loader2 className="w-12 h-12 animate-spin text-zinc-300" />
