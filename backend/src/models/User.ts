@@ -28,6 +28,11 @@ const UserSchema: Schema = new Schema(
     otpExpires: {
       type: Date,
     },
+    status: {
+      type: String,
+      enum: ['active', 'blocked'],
+      default: 'active',
+    },
   },
   {
     timestamps: true,

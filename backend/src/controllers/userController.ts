@@ -14,6 +14,13 @@ export const sendOtp = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    // Validate phone number format (exactly 10 digits)
+    const phoneRegex = /^[0-9]{10}$/;
+    if (!phoneRegex.test(phone)) {
+      res.status(400).json({ message: 'Invalid phone number format. Must be 10 digits.' });
+      return;
+    }
+
     let user = await User.findOne({ phone });
 
     if (!user) {

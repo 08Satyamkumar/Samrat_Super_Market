@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import Admin from '../models/Admin';
 import generateToken from '../utils/generateToken';
 import { AdminRequest } from '../middlewares/authMiddleware';
+import User from '../models/User';
+import Order from '../models/Order';
 
 // @desc    Auth admin & get token
 // @route   POST /api/admin/login
@@ -76,3 +78,93 @@ export const registerAdmin = async (req: Request, res: Response) => {
     res.status(400).json({ message: 'Invalid admin data' });
   }
 };
+
+export const getUsers = async (req: Request, res: Response) => {
+  try {
+    const users = await User.aggregate([
+      {
+        $lookup: {
+          from: 'orders',
+          localField: '_id',
+          foreignField: 'user_id',
+          as: 'orders'
+        }
+      },
+      {
+        $project: {
+          name: 1,
+          phone: 1,
+          status: 1,
+          createdAt: 1,
+          totalOrders: { $size: '$orders' },
+          totalSpent: {
+            $reduce: {
+              input: '$orders',
+              initialValue: 0,
+              in: {
+                $cond: [
+                  { $eq: ['$$this.status', 'delivered'] }, 
+                  { $add: ['$$value', '$$this.total_amount'] },
+                  '$$value'
+                ]
+              }
+            }
+          }
+        }
+      },
+      { $sort: { createdAt: -1 } }
+    ]);
+
+    res.status(200).json(users);
+  } catch (error) {
+    console.error('Error fetching users CRM data:', error);
+    res.status(500).json({ message: 'Server error while fetching users' });
+  }
+};
+
+export const updateUserStatus = async (req: Request, res: Response) => {
+  try {
+    const { status } = req.body;
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    user.set('status', status);
+    await user.save();
+
+    res.status(200).json({ message: `User status updated to ${status}`, user });
+  } catch (error) {
+    console.error('Error updating user status:', error);
+    res.status(500).json({ message: 'Server error while updating user status' });
+  }
+};
+
+export const getUserDetails = async (req: Request, res: Response) => {
+  try {
+    const user = await User.findById(req.params.id).select('-otp');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const orders = await Order.find({ user_id: user._id })
+      .populate('shop_id', 'name logo')
+      .sort({ createdAt: -1 });
+
+    const totalSpent = orders.reduce((acc, order) => order.status === 'delivered' ? acc + order.total_amount : acc, 0);
+
+    res.status(200).json({
+      user,
+      stats: {
+        totalOrders: orders.length,
+        totalSpent
+      },
+      orders
+    });
+  } catch (error) {
+    console.error('Error fetching user details:', error);
+    res.status(500).json({ message: 'Server error while fetching user details' });
+  }
+};
+

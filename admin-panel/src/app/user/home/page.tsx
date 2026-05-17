@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { API_URL } from "@/lib/api";
 import { LoginModal } from "@/components/user/LoginModal";
 import { CheckoutModal } from "@/components/user/CheckoutModal";
+import { FeedbackModal } from "@/components/user/FeedbackModal";
 
 export default function UserHomePage() {
   const [products, setProducts] = useState<any[]>([]);
@@ -40,6 +41,7 @@ export default function UserHomePage() {
   
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
 
   // Live Order State
   const [activeOrders, setActiveOrders] = useState<any[]>([]);
@@ -282,6 +284,36 @@ export default function UserHomePage() {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Feedback Button */}
+          <button 
+            onClick={() => {
+              if (!userToken) {
+                toast.info("Please login to give feedback");
+                setIsLoginModalOpen(true);
+              } else {
+                setIsFeedbackModalOpen(true);
+              }
+            }}
+            className="h-11 hidden sm:flex items-center justify-center gap-2 bg-purple-50 hover:bg-purple-100 border border-purple-200/50 rounded-2xl shadow-sm transition-all cursor-pointer px-4 relative group"
+          >
+            <MessageCircle className="w-4 h-4 text-purple-600 group-hover:scale-110 transition-transform" />
+            <span className="text-purple-700 font-bold text-xs tracking-wide">Feedback</span>
+          </button>
+          
+          <button 
+            onClick={() => {
+              if (!userToken) {
+                toast.info("Please login to give feedback");
+                setIsLoginModalOpen(true);
+              } else {
+                setIsFeedbackModalOpen(true);
+              }
+            }}
+            className="h-11 w-11 sm:hidden flex items-center justify-center bg-purple-50 hover:bg-purple-100 border border-purple-200/50 rounded-2xl shadow-sm transition-all cursor-pointer relative group"
+          >
+            <MessageCircle className="w-4 h-4 text-purple-600 group-hover:scale-110 transition-transform" />
+          </button>
+
           {/* WhatsApp Support Logo */}
           <a 
             href={`https://wa.me/919217571488?text=${encodeURIComponent("Hello Super Admin, I need some help with Samrat Market.")}`}
@@ -296,10 +328,19 @@ export default function UserHomePage() {
             <span className="text-zinc-300 font-medium text-[10px] tracking-wide group-hover:text-white transition-colors relative z-10">Help</span>
           </a>
 
-          {/* Profile */}
-          <Link href="/user/profile" className="w-11 h-11 rounded-2xl flex items-center justify-center bg-zinc-900 text-white shadow-md hover:scale-105 transition-transform hover:shadow-lg">
-            <User className="w-4 h-4" />
-          </Link>
+          {/* Profile / Login */}
+          {userToken ? (
+            <Link href="/user/profile" className="w-11 h-11 rounded-2xl flex items-center justify-center bg-zinc-900 text-white shadow-md hover:scale-105 transition-transform hover:shadow-lg">
+              <User className="w-4 h-4" />
+            </Link>
+          ) : (
+            <button 
+              onClick={() => setIsLoginModalOpen(true)}
+              className="px-5 h-11 rounded-2xl flex items-center justify-center bg-zinc-900 text-white font-bold text-sm shadow-md hover:scale-105 transition-transform hover:shadow-lg"
+            >
+              Login
+            </button>
+          )}
         </div>
       </nav>
 
@@ -840,6 +881,12 @@ export default function UserHomePage() {
             </div>
           )}
         </div>
+
+        <FeedbackModal 
+          isOpen={isFeedbackModalOpen} 
+          onClose={() => setIsFeedbackModalOpen(false)} 
+          userToken={userToken} 
+        />
       </main>
 
       {/* 📱 Bottom Navigation (Mobile Only) */}

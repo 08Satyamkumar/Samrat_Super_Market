@@ -26,6 +26,12 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, primaryColor = "#1
       toast.error("Please enter Name and Phone number");
       return;
     }
+    
+    const phoneRegex = /^[0-9]{10}$/;
+    if (!phoneRegex.test(customerPhone)) {
+      toast.error("Please enter a valid 10-digit phone number");
+      return;
+    }
     setIsLoggingIn(true);
     try {
       const res = await fetch(`${API_URL}/api/users/send-otp`, {
@@ -104,7 +110,17 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, primaryColor = "#1
                   </div>
                   <div>
                     <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest ml-2 mb-2 block">Phone Number</label>
-                    <input type="tel" placeholder="9876543210" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} className="w-full px-5 py-4 rounded-2xl bg-zinc-50 border border-zinc-200 outline-none focus:border-zinc-400 focus:bg-white transition-all font-bold text-zinc-900 placeholder:text-zinc-400" />
+                    <input 
+                      type="tel" 
+                      placeholder="9876543210" 
+                      maxLength={10}
+                      value={customerPhone} 
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        if (val.length <= 10) setCustomerPhone(val);
+                      }} 
+                      className="w-full px-5 py-4 rounded-2xl bg-zinc-50 border border-zinc-200 outline-none focus:border-zinc-400 focus:bg-white transition-all font-bold text-zinc-900 placeholder:text-zinc-400" 
+                    />
                   </div>
                 </div>
                 <button 

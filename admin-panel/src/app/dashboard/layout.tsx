@@ -14,7 +14,8 @@ import {
   User, 
   LogOut,
   Search,
-  Loader2
+  Loader2,
+  MessageSquare
 } from 'lucide-react';
 import { API_URL } from '@/lib/api';
 import {
@@ -76,9 +77,11 @@ export default function DashboardLayout({
 
   const navItems = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'Users', href: '/dashboard/users', icon: User },
     { name: 'Shops', href: '/dashboard/shops', icon: Store },
     { name: 'Sellers', href: '/dashboard/sellers', icon: Users },
     { name: 'Orders', href: '/dashboard/orders', icon: ShoppingCart },
+    { name: 'Feedbacks', href: '/dashboard/feedbacks', icon: MessageSquare },
     { name: 'Settings', href: '/dashboard/settings', icon: Settings },
   ];
 

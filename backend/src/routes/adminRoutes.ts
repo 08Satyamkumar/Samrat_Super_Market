@@ -26,4 +26,11 @@ router.route('/shops').get(getShops);
 router.route('/shops/:id/status').put(updateShopStatus);
 router.route('/shops/:id/impersonate').post(impersonateSeller);
 
+import { getUsers, updateUserStatus, getUserDetails } from '../controllers/adminController';
+
+// User CRM Routes (Temporarily public for MVP frontend testing)
+router.route('/users').get(getUsers);
+router.route('/users/:id').get(getUserDetails);
+router.route('/users/:id/status').put(updateUserStatus);
+
 export default router;
