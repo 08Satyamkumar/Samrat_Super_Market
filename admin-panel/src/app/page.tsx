@@ -2,8 +2,9 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { motion, useMotionTemplate, useMotionValue, useSpring, useInView, animate } from 'framer-motion';
-import { Utensils, Store, ChefHat, Star, Flame, Users, TrendingUp, ShoppingBag, Globe } from 'lucide-react';
+import { Utensils, Store, ChefHat, Star, Flame, Users, TrendingUp, ShoppingBag, Globe, Loader2 } from 'lucide-react';
 
 // ======================= ANIMATED COUNTER =======================
 const AnimatedCounter = ({ to, suffix = "" }: { to: number, suffix?: string }) => {
@@ -187,6 +188,34 @@ const FloatingScene = ({ items, type }: { items: typeof vegItems, type: 'veg' | 
 
 // ======================= MAIN PAGE =======================
 export default function UnifiedMainWebsite() {
+  const router = useRouter();
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    const adminToken = localStorage.getItem("adminToken");
+    const sellerToken = localStorage.getItem("sellerToken");
+    const userToken = localStorage.getItem("userToken");
+
+    if (adminToken) {
+      router.push("/dashboard");
+    } else if (sellerToken) {
+      router.push("/seller/dashboard");
+    } else if (userToken) {
+      router.push("/user/home");
+    } else {
+      setIsCheckingAuth(false);
+    }
+  }, [router]);
+
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center">
+        <Loader2 className="w-10 h-10 animate-spin text-white mb-4" />
+        <p className="text-zinc-500 font-bold uppercase tracking-widest animate-pulse text-sm">Opening Food Universe...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-black overflow-x-hidden relative font-sans selection:bg-orange-500/30 text-white">
       

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mail, Lock, ArrowRight, Store, Eye, EyeOff, KeyRound, ChevronLeft } from "lucide-react";
@@ -27,6 +27,16 @@ export default function SellerLogin() {
   // General State
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    const sellerToken = localStorage.getItem("sellerToken");
+    if (sellerToken) {
+      router.push("/seller/dashboard");
+    } else {
+      setIsCheckingAuth(false);
+    }
+  }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,6 +141,15 @@ export default function SellerLogin() {
       setIsLoading(false);
     }
   };
+
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center">
+        <Store className="w-10 h-10 animate-bounce text-violet-500 mb-4" />
+        <p className="text-zinc-500 font-bold uppercase tracking-widest text-sm animate-pulse">Entering Dukaan...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen relative flex items-center justify-center overflow-hidden bg-zinc-950">
