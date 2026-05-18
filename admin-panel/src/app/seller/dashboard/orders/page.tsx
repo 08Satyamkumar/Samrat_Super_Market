@@ -18,11 +18,7 @@ export default function OrdersPage() {
   const [prepTime, setPrepTime] = useState("15 mins");
   const [currentTime, setCurrentTime] = useState(Date.now());
 
-  const previousOrdersCount = useRef(0);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
   useEffect(() => {
-    audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3'); // short bell/ting
     // Timer for urgent orders
     const interval = setInterval(() => setCurrentTime(Date.now()), 10000);
     return () => clearInterval(interval);
@@ -37,16 +33,6 @@ export default function OrdersPage() {
       if (res.ok) {
         const data = await res.json();
         setOrders(data);
-        
-        // Count new (pending) orders
-        const newOrdersCount = data.filter((o: any) => o.status === 'pending').length;
-        
-        // Play sound if new order arrived
-        if (previousOrdersCount.current !== 0 && newOrdersCount > previousOrdersCount.current) {
-          audioRef.current?.play().catch(e => console.log("Audio blocked", e));
-          toast.success("New Order Arrived!", { icon: "🔔" });
-        }
-        previousOrdersCount.current = newOrdersCount;
       }
     } catch (error) {
       console.error(error);

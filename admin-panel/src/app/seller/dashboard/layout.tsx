@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -76,6 +76,8 @@ export default function SellerDashboardLayout({
     }
   }, [router]);
 
+  const previousNotifCount = useRef(-1);
+
   // Polling for Notifications
   useEffect(() => {
     const token = localStorage.getItem("sellerToken");
@@ -91,13 +93,15 @@ export default function SellerDashboardLayout({
         if (response.ok) {
           const data = await response.json();
           // If we have more notifications than before, it means a new one arrived
-          if (data.length > notifications.length && notifications.length > 0) {
+          if (previousNotifCount.current !== -1 && data.length > previousNotifCount.current) {
             // New order received!
             try {
-              const audio = new Audio('/notification.mp3');
+              const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
               audio.play().catch(e => console.log('Audio play failed', e));
+              toast.success("🔔 New Order Arrived! Please check the Orders tab.", { duration: 8000 });
             } catch (e) {}
           }
+          previousNotifCount.current = data.length;
           setNotifications(data);
         }
       } catch (error) {
@@ -106,9 +110,9 @@ export default function SellerDashboardLayout({
     };
 
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 10000); // Check every 10 seconds
+    const interval = setInterval(fetchNotifications, 5000); // Check every 5 seconds for fast alerts
     return () => clearInterval(interval);
-  }, [notifications.length]);
+  }, []);
 
   const dismissNotification = async (id: string) => {
     const token = localStorage.getItem("sellerToken");
