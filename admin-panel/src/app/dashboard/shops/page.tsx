@@ -55,7 +55,7 @@ export default function ShopsPage() {
       if (res.ok) {
         // Store impersonation data in localStorage
         localStorage.setItem("sellerToken", data.token);
-        localStorage.setItem("seller", JSON.stringify(data.seller));
+        localStorage.setItem("sellerInfo", JSON.stringify(data.seller));
         localStorage.setItem("isImpersonated", "true");
         
         // Redirect to seller dashboard
