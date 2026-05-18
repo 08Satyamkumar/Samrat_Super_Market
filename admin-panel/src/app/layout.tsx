@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { WhatsAppSupport } from "@/components/WhatsAppSupport";
+import { IosInstallPrompt } from "@/components/IosInstallPrompt";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -46,6 +47,7 @@ export default function RootLayout({
           {children}
           <Toaster />
           <WhatsAppSupport />
+          <IosInstallPrompt />
         </ThemeProvider>
       </body>
     </html>
