@@ -21,6 +21,22 @@ import {
   Bell,
   CheckCircle2
 } from "lucide-react";
+import { toast } from "sonner";
+
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding)
+    .replace(/\-/g, '+')
+    .replace(/_/g, '/');
+
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
 
 export default function SellerDashboardLayout({
   children,
@@ -112,6 +128,66 @@ export default function SellerDashboardLayout({
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 5000); // Check every 5 seconds for fast alerts
     return () => clearInterval(interval);
+  }, []);
+
+  // Web Push Subscription Logic
+  useEffect(() => {
+    const subscribeToPush = async () => {
+      const token = localStorage.getItem("sellerToken");
+      if (!token) return;
+
+      if ('serviceWorker' in navigator && 'PushManager' in window) {
+        try {
+          // Request permission
+          const permission = await Notification.requestPermission();
+          if (permission !== 'granted') {
+            console.log('Push notification permission denied.');
+            return;
+          }
+
+          // Register service worker
+          const registration = await navigator.serviceWorker.register('/sw.js');
+          
+          // Wait for service worker to be ready
+          await navigator.serviceWorker.ready;
+
+          // Check for existing subscription
+          let subscription = await registration.pushManager.getSubscription();
+
+          // If no subscription, create one
+          if (!subscription) {
+            const publicVapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+            if (!publicVapidKey) {
+               console.error("VAPID Public key is missing!");
+               return;
+            }
+            const convertedVapidKey = urlBase64ToUint8Array(publicVapidKey);
+
+            subscription = await registration.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: convertedVapidKey
+            });
+          }
+
+          // Send the subscription to the backend
+          await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/seller/push-subscription`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ subscription })
+          });
+          
+          console.log('Push subscription successful!');
+
+        } catch (error) {
+          console.error('Error during push subscription:', error);
+        }
+      }
+    };
+
+    subscribeToPush();
   }, []);
 
   const dismissNotification = async (id: string) => {

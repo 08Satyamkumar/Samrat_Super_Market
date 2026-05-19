@@ -4,6 +4,7 @@ import Seller from '../models/Seller';
 import Product from '../models/Product';
 import Order from '../models/Order';
 import generateToken from '../utils/generateToken';
+import { sendPushNotification } from '../utils/webPush';
 
 // @route   GET /api/admin/shops
 // @access  Private
@@ -236,6 +237,28 @@ export const createPublicOrder = async (req: Request, res: Response) => {
     });
 
     const createdOrder = await order.save();
+    
+    // Fetch Shop and Seller to send push notification
+    const shop = await Shop.findById(shopId);
+    if (shop && shop.owner_id) {
+      const seller = await Seller.findById(shop.owner_id);
+      if (seller && seller.pushSubscription) {
+        const payload = {
+          title: 'New Order Arrived! 🚀',
+          body: `${customerName} just placed an order for ₹${total_amount.toFixed(2)}.`,
+          url: '/seller/dashboard/orders',
+          orderId: createdOrder._id
+        };
+        try {
+          await sendPushNotification(seller.pushSubscription, payload);
+          console.log(`Push notification sent to seller ${seller._id}`);
+        } catch (pushError) {
+          console.error('Failed to send push notification:', pushError);
+          // If subscription is invalid/expired, we might want to clear it, but let's just log for now
+        }
+      }
+    }
+
     res.status(201).json(createdOrder);
   } catch (error) {
     console.error('Error creating order:', error);

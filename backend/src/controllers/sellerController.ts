@@ -1034,3 +1034,22 @@ export const dismissNotification = async (req: SellerRequest, res: Response): Pr
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
+
+export const savePushSubscription = async (req: SellerRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.seller) {
+      res.status(401).json({ message: 'Not authorized' });
+      return;
+    }
+    const { subscription } = req.body;
+    
+    await Seller.findByIdAndUpdate(req.seller._id, {
+      pushSubscription: subscription
+    });
+
+    res.status(200).json({ message: 'Push subscription saved successfully' });
+  } catch (error) {
+    console.error('Error saving push subscription:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};

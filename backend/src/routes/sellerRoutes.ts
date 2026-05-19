@@ -1,5 +1,5 @@
 import express from 'express';
-import { registerSeller, clearTestData, loginSeller, forgotPassword, resetPassword, uploadAIMenu, getSellerMenu, uploadAIImageMenu, deleteProduct, updateProduct, bulkDeleteProducts, toggleProductAvailability, updateShopSettings, getShopSettings, getSellerOrders, updateOrderStatus, getDashboardAnalytics, updateProductImage, removeProductImage, addProduct, generateItemDescription, updateShopLogo, updateShopBanner, removeShopBanner, getUnreadNotifications, dismissNotification } from '../controllers/sellerController';
+import { registerSeller, clearTestData, loginSeller, forgotPassword, resetPassword, uploadAIMenu, getSellerMenu, uploadAIImageMenu, deleteProduct, updateProduct, bulkDeleteProducts, toggleProductAvailability, updateShopSettings, getShopSettings, getSellerOrders, updateOrderStatus, getDashboardAnalytics, updateProductImage, removeProductImage, addProduct, generateItemDescription, updateShopLogo, updateShopBanner, removeShopBanner, getUnreadNotifications, dismissNotification, savePushSubscription } from '../controllers/sellerController';
 import { protectSeller } from '../middlewares/authMiddleware';
 import multer from 'multer';
 
@@ -58,6 +58,7 @@ router.put('/orders/:id/status', protectSeller, updateOrderStatus);
 // Notifications
 router.get('/notifications', protectSeller, getUnreadNotifications);
 router.put('/notifications/:id/dismiss', protectSeller, dismissNotification);
+router.post('/push-subscription', protectSeller, savePushSubscription);
 
 // Analytics
 router.get('/analytics', protectSeller, getDashboardAnalytics);

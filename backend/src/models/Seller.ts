@@ -41,6 +41,10 @@ const sellerSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    pushSubscription: {
+      type: Object,
+      default: null,
+    },
   },
   {
     timestamps: true,
