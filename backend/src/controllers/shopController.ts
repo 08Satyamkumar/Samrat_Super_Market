@@ -5,6 +5,9 @@ import Product from '../models/Product';
 import Order from '../models/Order';
 import generateToken from '../utils/generateToken';
 import { sendPushNotification } from '../utils/webPush';
+import { uploadToCloudinary } from '../utils/cloudinary';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { sendOrderAlert } from '../utils/telegram';
 
 // @route   GET /api/admin/shops
 // @access  Private
@@ -214,13 +217,58 @@ export const getPublicShopProducts = async (req: Request, res: Response) => {
 // @desc    Create an order for a public shop
 // @route   POST /api/shops/:shopId/orders
 // @access  Public
-export const createPublicOrder = async (req: Request, res: Response) => {
+export const createPublicOrder = async (req: Request | any, res: Response) => {
   try {
     const { shopId } = req.params;
-    const { customerName, customerPhone, orderItems, total_amount, paymentMethod, userId, orderType } = req.body;
+    let { customerName, customerPhone, orderItems, total_amount, paymentMethod, userId, orderType } = req.body;
+
+    if (typeof orderItems === 'string') {
+      try {
+        orderItems = JSON.parse(orderItems);
+      } catch (e) {
+        console.error("Failed to parse orderItems string");
+      }
+    }
 
     if (!orderItems || orderItems.length === 0) {
       return res.status(400).json({ message: 'No order items' });
+    }
+
+    let paymentProofImage = null;
+    let aiVerificationStatus = 'none';
+    let aiVerificationMessage = '';
+
+    if (req.file && req.file.buffer) {
+      paymentProofImage = await uploadToCloudinary(req.file.buffer, 'samrat_market/payment_proofs');
+      
+      try {
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (apiKey) {
+          const genAI = new GoogleGenerativeAI(apiKey);
+          const model = genAI.getGenerativeModel({ 
+            model: "gemini-2.5-flash-lite",
+            generationConfig: { responseMimeType: "application/json" }
+          });
+          const imageParts = [{ inlineData: { data: req.file.buffer.toString("base64"), mimeType: req.file.mimetype } }];
+          const prompt = `You are verifying a payment success screenshot for a UPI transaction.
+          The expected amount is ₹${total_amount}.
+          Does the image clearly show a successful payment of exactly ₹${total_amount}? 
+          Return JSON format: { "status": "verified" or "flagged", "message": "Short 1-sentence reason (e.g. 'Successful payment of ₹150 detected.' or 'Amount mismatch, expected ₹150 but found ₹100.')" }`;
+          
+          const result = await model.generateContent([prompt, ...imageParts]);
+          const responseText = (await result.response).text();
+          const data = JSON.parse(responseText);
+          
+          if(data && data.status) {
+             aiVerificationStatus = data.status;
+             aiVerificationMessage = data.message;
+          }
+        }
+      } catch (e) {
+        console.error("AI Verification Error:", e);
+        aiVerificationStatus = 'flagged';
+        aiVerificationMessage = 'AI failed to process the image. Please verify manually.';
+      }
     }
 
     const order = new Order({
@@ -233,28 +281,43 @@ export const createPublicOrder = async (req: Request, res: Response) => {
       paymentMethod,
       isPaid: false, // Default unpaid for 'Pay at Shop/QR'
       status: 'pending',
-      orderType: orderType || 'delivery'
+      orderType: orderType || 'delivery',
+      paymentProofImage,
+      aiVerificationStatus,
+      aiVerificationMessage
     });
 
     const createdOrder = await order.save();
     
-    // Fetch Shop and Seller to send push notification
+    // Fetch Shop and Seller to send push notification & Telegram message
     const shop = await Shop.findById(shopId);
     if (shop && shop.owner_id) {
       const seller = await Seller.findById(shop.owner_id);
-      if (seller && seller.pushSubscription) {
-        const payload = {
-          title: 'New Order Arrived! 🚀',
-          body: `${customerName} just placed an order for ₹${total_amount.toFixed(2)}.`,
-          url: '/seller/dashboard/orders',
-          orderId: createdOrder._id
-        };
-        try {
-          await sendPushNotification(seller.pushSubscription, payload);
-          console.log(`Push notification sent to seller ${seller._id}`);
-        } catch (pushError) {
-          console.error('Failed to send push notification:', pushError);
-          // If subscription is invalid/expired, we might want to clear it, but let's just log for now
+      if (seller) {
+        // Send Web Push Notification
+        if (seller.pushSubscription) {
+          const itemsSummary = orderItems.map((item: any) => `${item.name}${item.variant ? ` (${item.variant})` : ''} x${item.qty}`).join(', ');
+          const payload = {
+            title: 'New Order Arrived! 🚀',
+            body: `${customerName} ordered: ${itemsSummary} (Total: ₹${total_amount.toFixed(2)})`,
+            url: '/seller/dashboard/orders',
+            orderId: createdOrder._id
+          };
+          try {
+            await sendPushNotification(seller.pushSubscription, payload);
+            console.log(`Push notification sent to seller ${seller._id}`);
+          } catch (pushError) {
+            console.error('Failed to send push notification:', pushError);
+          }
+        }
+        
+        // Send Telegram Deep Alert
+        if (seller.telegramChatId) {
+          try {
+            await sendOrderAlert(seller.telegramChatId, createdOrder);
+          } catch (err) {
+            console.error('Failed to send Telegram alert:', err);
+          }
         }
       }
     }

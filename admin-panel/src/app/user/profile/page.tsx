@@ -191,7 +191,7 @@ export default function UserProfilePage() {
                       <div className="space-y-2">
                         {order.orderItems.map((item: any, index: number) => (
                           <div key={index} className="flex justify-between items-center text-sm">
-                            <span className="font-medium text-zinc-700"><span className="text-zinc-400 font-bold mr-2">{item.qty}x</span> {item.name}</span>
+                            <span className="font-medium text-zinc-700"><span className="text-zinc-400 font-bold mr-2">{item.qty}x</span> {item.name}{item.variant && ` (${item.variant})`}</span>
                             <span className="font-bold text-zinc-900">₹{item.price * item.qty}</span>
                           </div>
                         ))}

@@ -45,6 +45,14 @@ const sellerSchema = new mongoose.Schema(
       type: Object,
       default: null,
     },
+    telegramChatId: {
+      type: String,
+      default: null,
+    },
+    telegramLinkToken: {
+      type: String,
+      default: null,
+    },
   },
   {
     timestamps: true,

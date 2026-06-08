@@ -45,6 +45,15 @@ const productSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    variants: {
+      type: [
+        {
+          name: { type: String, required: true },
+          price: { type: Number, required: true }
+        }
+      ],
+      default: []
+    }
   },
   {
     timestamps: true,

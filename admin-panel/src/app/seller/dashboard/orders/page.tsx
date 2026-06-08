@@ -87,7 +87,7 @@ export default function OrdersPage() {
     let itemsHtml = order.orderItems.map((item:any) => `
       <tr>
         <td style="padding: 8px 0; border-bottom: 1px dashed #ccc;"><b>${item.qty}x</b></td>
-        <td style="padding: 8px 0; border-bottom: 1px dashed #ccc;">${item.name}</td>
+        <td style="padding: 8px 0; border-bottom: 1px dashed #ccc;">${item.name}${item.variant ? ` (${item.variant})` : ''}</td>
       </tr>
     `).join('');
 
@@ -301,7 +301,7 @@ export default function OrdersPage() {
                         <li key={idx} className="flex justify-between items-center text-sm">
                           <span className="flex items-center gap-2">
                             <span className="w-6 h-6 rounded bg-muted flex items-center justify-center text-xs font-bold border border-border">{item.qty}x</span>
-                            <span className="text-muted-foreground truncate max-w-[150px] font-medium">{item.name}</span>
+                            <span className="text-muted-foreground truncate max-w-[150px] font-medium">{item.name}${item.variant ? ` (${item.variant})` : ''}</span>
                           </span>
                           <span className="font-semibold text-foreground">₹{item.price * item.qty}</span>
                         </li>
@@ -313,9 +313,48 @@ export default function OrdersPage() {
                         Target Prep Time: {order.preparationTime}
                       </div>
                     )}
+
+                    {order.paymentProofImage && (
+                      <div className="mt-4 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 flex items-start gap-3">
+                        <a href={order.paymentProofImage} target="_blank" rel="noreferrer" className="shrink-0 block bg-white rounded-md p-1 border shadow-sm hover:scale-105 transition-transform">
+                          <img src={order.paymentProofImage} alt="Payment Proof" className="w-12 h-12 object-cover rounded" />
+                        </a>
+                        <div className="flex-1">
+                          <p className="text-[10px] uppercase tracking-wider font-bold text-zinc-500 mb-1.5">User Attachment</p>
+                          {order.aiVerificationStatus === 'verified' && (
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 dark:text-emerald-400 px-2 py-1 rounded inline-flex border border-emerald-200 dark:border-emerald-500/20">
+                              <CheckCircle2 className="w-3.5 h-3.5" /> AI Verified: Amount Match
+                            </div>
+                          )}
+                          {order.aiVerificationStatus === 'flagged' && (
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-1.5 text-xs font-bold text-red-600 bg-red-50 dark:bg-red-500/10 dark:text-red-400 px-2 py-1 rounded inline-flex w-fit border border-red-200 dark:border-red-500/20">
+                                <XCircle className="w-3.5 h-3.5" /> AI Alert: Verification Failed
+                              </div>
+                              <p className="text-[10px] text-red-500/80 font-medium leading-tight">{order.aiVerificationMessage}</p>
+                            </div>
+                          )}
+                          {(!order.aiVerificationStatus || order.aiVerificationStatus === 'none' || order.aiVerificationStatus === 'pending') && (
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-600 bg-amber-50 dark:bg-amber-500/10 dark:text-amber-400 px-2 py-1 rounded inline-flex border border-amber-200 dark:border-amber-500/20">
+                              <Timer className="w-3.5 h-3.5" /> Manual Check Required
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="pt-4 border-t border-border mt-auto">
+                    {!order.isPaid && (order.paymentMethod === 'Online/UPI' || order.paymentMethod?.toLowerCase().includes('upi')) && (
+                      <button
+                        onClick={() => updateOrderStatus(order._id, order.status, true)}
+                        disabled={updatingId === order._id}
+                        className="w-full mb-3 bg-emerald-500 hover:bg-emerald-600 text-white py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-50 shadow-md active:scale-95"
+                      >
+                        <CheckCircle2 className="w-4 h-4" /> Verify UPI Payment
+                      </button>
+                    )}
+
                     {order.status === 'pending' && (
                       <div className="flex gap-3">
                         <button 

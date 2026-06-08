@@ -22,6 +22,7 @@ import sellerRoutes from './routes/sellerRoutes';
 import shopRoutes from './routes/shopRoutes';
 import userRoutes from './routes/userRoutes';
 import feedbackRoutes from './routes/feedbackRoutes';
+import telegramRoutes from './routes/telegramRoutes';
 
 // Routes
 app.use('/api/admin', adminRoutes);
@@ -29,6 +30,7 @@ app.use('/api/seller', sellerRoutes);
 app.use('/api/shops', shopRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/feedbacks', feedbackRoutes);
+app.use('/api/telegram', telegramRoutes);
 
 app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'OK', message: 'API is running', environment: 'world-class' });

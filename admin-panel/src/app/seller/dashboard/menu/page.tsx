@@ -10,7 +10,10 @@ export default function MenuPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showManualAddModal, setShowManualAddModal] = useState(false);
-  const [manualItem, setManualItem] = useState({ name: "", price: "", category: "general", description: "" });
+  const [modalMode, setModalMode] = useState<"add" | "edit">("add");
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [hasVariants, setHasVariants] = useState(false);
+  const [manualItem, setManualItem] = useState({ name: "", price: "", category: "general", description: "", variants: [] as any[] });
   const [isAddingManual, setIsAddingManual] = useState(false);
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
   const [uploadMethod, setUploadMethod] = useState<"text" | "image">("text");
@@ -171,31 +174,57 @@ export default function MenuPage() {
 
   const handleManualAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!manualItem.name || !manualItem.price) {
+    if (!manualItem.name || (!hasVariants && !manualItem.price)) {
       toast.error("Name and price are required");
       return;
+    }
+
+    if (hasVariants) {
+      if (!manualItem.variants || manualItem.variants.length === 0) {
+        toast.error("Please add at least one variant size");
+        return;
+      }
+      for (const v of manualItem.variants) {
+        if (!v.name.trim() || !v.price.trim() || isNaN(Number(v.price))) {
+          toast.error("All variant sizes must have a name and valid price");
+          return;
+        }
+      }
     }
     
     setIsAddingManual(true);
     try {
       const token = localStorage.getItem("sellerToken");
-      const res = await fetch(`${API_URL}/api/seller/product`, {
-        method: "POST",
+      const url = modalMode === "add" 
+        ? `${API_URL}/api/seller/product`
+        : `${API_URL}/api/seller/product/${editingProductId}`;
+      const method = modalMode === "add" ? "POST" : "PUT";
+
+      const payload = {
+        name: manualItem.name,
+        price: hasVariants ? Number(manualItem.variants[0].price) : Number(manualItem.price),
+        category: manualItem.category,
+        description: manualItem.description,
+        variants: hasVariants ? manualItem.variants.map(v => ({ name: v.name, price: Number(v.price) })) : []
+      };
+
+      const res = await fetch(url, {
+        method,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify(manualItem)
+        body: JSON.stringify(payload)
       });
       
       const data = await res.json();
       if (res.ok) {
-        toast.success("Item added successfully! 🎉");
+        toast.success(modalMode === "add" ? "Item added successfully! 🎉" : "Item updated successfully! 🎉");
         fetchProducts(); // Refetch to get the fully populated shop_id (with name and logo)
         setShowManualAddModal(false);
-        setManualItem({ name: "", price: "", category: "general", description: "" });
+        setManualItem({ name: "", price: "", category: "general", description: "", variants: [] });
       } else {
-        toast.error(data.message || "Failed to add item");
+        toast.error(data.message || `Failed to ${modalMode} item`);
       }
     } catch (error) {
       toast.error("Network error");
@@ -299,31 +328,27 @@ export default function MenuPage() {
     }
   };
 
-  const handleEdit = async (id: string, currentName: string, currentPrice: number) => {
-    const newName = prompt("Enter new name:", currentName);
-    if (!newName) return;
-    const newPrice = prompt("Enter new price:", currentPrice.toString());
-    if (!newPrice || isNaN(Number(newPrice))) return;
+  const openAddModal = () => {
+    setModalMode("add");
+    setEditingProductId(null);
+    setHasVariants(false);
+    setManualItem({ name: "", price: "", category: "general", description: "", variants: [] });
+    setShowManualAddModal(true);
+  };
 
-    try {
-      const token = localStorage.getItem("sellerToken");
-      const res = await fetch(`${API_URL}/api/seller/product/${id}`, {
-        method: "PUT",
-        headers: { 
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}` 
-        },
-        body: JSON.stringify({ name: newName, price: Number(newPrice) })
-      });
-      if (res.ok) {
-        toast.success("Item updated successfully");
-        fetchProducts();
-      } else {
-        toast.error("Failed to update item");
-      }
-    } catch (error) {
-      toast.error("Network error");
-    }
+  const openEditModal = (product: any) => {
+    setModalMode("edit");
+    setEditingProductId(product._id);
+    const hasVars = product.variants && product.variants.length > 0;
+    setHasVariants(hasVars);
+    setManualItem({
+      name: product.name,
+      price: product.price ? product.price.toString() : "",
+      category: product.category || "general",
+      description: product.description || "",
+      variants: product.variants ? product.variants.map((v: any) => ({ name: v.name, price: v.price.toString() })) : []
+    });
+    setShowManualAddModal(true);
   };
 
   const handleToggleAvailability = async (id: string, currentStatus: boolean) => {
@@ -365,7 +390,7 @@ export default function MenuPage() {
             AI Menu Upload
           </button>
           <button 
-            onClick={() => setShowManualAddModal(true)}
+            onClick={openAddModal}
             className="flex items-center gap-2 bg-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 hover:bg-zinc-800 text-white px-4 py-2.5 rounded-xl font-medium transition-colors"
           >
             <Plus className="w-5 h-5" />
@@ -536,7 +561,7 @@ export default function MenuPage() {
                 {/* Action Buttons */}
                 <div className="mt-auto flex gap-3">
                   <button 
-                    onClick={() => handleEdit(item._id, item.name, item.price)}
+                    onClick={() => openEditModal(item)}
                     className="flex-1 flex items-center justify-center gap-2 bg-zinc-100 dark:bg-zinc-800/50 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 py-3 rounded-xl text-sm font-bold transition-all hover:scale-[1.02] active:scale-95"
                   >
                     <Edit className="w-4 h-4" /> Edit
@@ -735,8 +760,8 @@ export default function MenuPage() {
               <div className="p-6 md:p-8">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-2xl font-bold flex items-center gap-3">
-                    <Plus className="text-indigo-500" />
-                    Add Menu Item
+                    {modalMode === "add" ? <Plus className="text-indigo-500" /> : <Edit className="text-indigo-500 w-6 h-6" />}
+                    {modalMode === "add" ? "Add Menu Item" : "Edit Menu Item"}
                   </h2>
                   <button onClick={() => setShowManualAddModal(false)} className="p-2 hover:bg-muted rounded-full transition-colors">
                     <X className="w-5 h-5" />
@@ -756,19 +781,54 @@ export default function MenuPage() {
                     />
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4">
+                  {/* Has Variants Toggle */}
+                  <div className="flex items-center justify-between bg-zinc-50 dark:bg-zinc-800/40 p-3.5 rounded-xl border border-border">
                     <div>
-                      <label className="block text-sm font-bold mb-2">Price (₹) <span className="text-red-500">*</span></label>
-                      <input 
-                        type="number" 
-                        required
-                        min="0"
-                        value={manualItem.price}
-                        onChange={(e) => setManualItem({...manualItem, price: e.target.value})}
-                        className="w-full bg-background border border-border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
-                        placeholder="150"
-                      />
+                      <p className="text-sm font-bold">Has Portions / Sizes?</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">Check this if item has Half, Full or custom sizes</p>
                     </div>
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        const newHasVariants = !hasVariants;
+                        setHasVariants(newHasVariants);
+                        if (newHasVariants && manualItem.variants.length === 0) {
+                          setManualItem(prev => ({ ...prev, variants: [{ name: "Half Plate", price: prev.price }, { name: "Full Plate", price: "" }] }));
+                        }
+                      }}
+                      className={`relative w-11 h-6 rounded-full transition-colors ${hasVariants ? 'bg-indigo-500' : 'bg-zinc-300 dark:bg-zinc-700 shadow-inner'}`}
+                    >
+                      <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform shadow-sm ${hasVariants ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+
+                  {/* Price and Category inputs (Conditional on hasVariants) */}
+                  {!hasVariants ? (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-bold mb-2">Price (₹) <span className="text-red-500">*</span></label>
+                        <input 
+                          type="number" 
+                          required={!hasVariants}
+                          min="0"
+                          value={manualItem.price}
+                          onChange={(e) => setManualItem({...manualItem, price: e.target.value})}
+                          className="w-full bg-background border border-border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
+                          placeholder="150"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold mb-2">Category</label>
+                        <input 
+                          type="text" 
+                          value={manualItem.category}
+                          onChange={(e) => setManualItem({...manualItem, category: e.target.value})}
+                          className="w-full bg-background border border-border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
+                          placeholder="e.g. South Indian"
+                        />
+                      </div>
+                    </div>
+                  ) : (
                     <div>
                       <label className="block text-sm font-bold mb-2">Category</label>
                       <input 
@@ -779,7 +839,62 @@ export default function MenuPage() {
                         placeholder="e.g. South Indian"
                       />
                     </div>
-                  </div>
+                  )}
+
+                  {/* Variants Row Builder */}
+                  {hasVariants && (
+                    <div className="space-y-3 p-4 bg-zinc-50 dark:bg-zinc-800/20 rounded-2xl border border-border max-h-48 overflow-y-auto">
+                      <div className="flex justify-between items-center">
+                        <label className="block text-xs font-black uppercase tracking-widest text-zinc-400">Plate Sizes & Prices</label>
+                        <button 
+                          type="button" 
+                          onClick={() => setManualItem(prev => ({ ...prev, variants: [...prev.variants, { name: "", price: "" }] }))}
+                          className="text-xs font-bold text-indigo-500 hover:text-indigo-600 flex items-center gap-1"
+                        >
+                          <Plus className="w-3.5 h-3.5" /> Add Size
+                        </button>
+                      </div>
+                      
+                      {manualItem.variants.map((v, i) => (
+                        <div key={i} className="flex gap-2 items-center">
+                          <input 
+                            type="text" 
+                            required 
+                            placeholder="e.g. Half Plate, Regular, Large"
+                            value={v.name}
+                            onChange={(e) => {
+                              const newVars = [...manualItem.variants];
+                              newVars[i].name = e.target.value;
+                              setManualItem({ ...manualItem, variants: newVars });
+                            }}
+                            className="flex-1 bg-background border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                          />
+                          <input 
+                            type="number" 
+                            required 
+                            min="0"
+                            placeholder="Price"
+                            value={v.price}
+                            onChange={(e) => {
+                              const newVars = [...manualItem.variants];
+                              newVars[i].price = e.target.value;
+                              setManualItem({ ...manualItem, variants: newVars });
+                            }}
+                            className="w-24 bg-background border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                          />
+                          <button 
+                            type="button"
+                            onClick={() => {
+                              setManualItem(prev => ({ ...prev, variants: prev.variants.filter((_, idx) => idx !== i) }));
+                            }}
+                            className="text-red-500 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   <div>
                     <div className="flex items-center justify-between mb-2">

@@ -32,6 +32,8 @@ export default function UserHomePage() {
   // Cart State
   const [cart, setCart] = useState<any[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [customizingProduct, setCustomizingProduct] = useState<any | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState<any | null>(null);
 
   // Auth & Checkout State
   const [userToken, setUserToken] = useState("");
@@ -225,25 +227,32 @@ export default function UserHomePage() {
   });
 
   // --- Cart Logic ---
-  const addToCart = (product: any) => {
+  const addToCart = (product: any, selectedVariant?: any) => {
     if (cart.length > 0 && cart[0].shop_id?._id !== product.shop_id?._id) {
       toast.error(`You already have items from ${cart[0].shop_id?.name}. Please checkout or clear your cart first.`);
       return;
     }
 
+    const variantName = selectedVariant ? selectedVariant.name : undefined;
+
     setCart(prev => {
-      const existing = prev.find(item => item._id === product._id);
+      const existing = prev.find(item => item._id === product._id && item.variant === variantName);
       if (existing) {
-        return prev.map(item => item._id === product._id ? { ...item, quantity: item.quantity + 1 } : item);
+        return prev.map(item => (item._id === product._id && item.variant === variantName) ? { ...item, quantity: item.quantity + 1 } : item);
       }
-      toast.success(`${product.name} added to cart`);
-      return [...prev, { ...product, quantity: 1 }];
+      toast.success(`${product.name}${variantName ? ` (${variantName})` : ''} added to cart`);
+      return [...prev, { 
+        ...product, 
+        price: selectedVariant ? Number(selectedVariant.price) : product.price, 
+        variant: variantName, 
+        quantity: 1 
+      }];
     });
   };
 
-  const updateQuantity = (id: string, delta: number) => {
+  const updateQuantity = (id: string, delta: number, variant?: string) => {
     setCart(prev => prev.map(item => {
-      if (item._id === id) {
+      if (item._id === id && item.variant === variant) {
         const newQ = item.quantity + delta;
         return newQ > 0 ? { ...item, quantity: newQ } : item;
       }
@@ -595,12 +604,50 @@ export default function UserHomePage() {
                          className={`absolute top-0 left-0 h-full rounded-full ${order.status === 'pending' ? 'bg-zinc-400' : order.status === 'processing' ? 'bg-orange-500' : order.status === 'ready' ? 'bg-blue-500' : 'bg-green-500'}`} 
                        />
                      </div>
-                     <div className="flex justify-between text-[10px] font-bold text-zinc-500 uppercase tracking-widest z-10">
+                     <div className="flex justify-between text-[10px] font-bold text-zinc-500 uppercase tracking-widest z-10 mb-4">
                        <span className={order.status === 'pending' ? 'text-zinc-300' : ''}>Placed</span>
                        <span className={order.status === 'processing' ? 'text-orange-400' : ''}>Preparing</span>
                        <span className={order.status === 'ready' ? 'text-blue-400' : ''}>Ready</span>
                        <span className={order.status === 'shipped' ? 'text-green-400' : ''}>On the way</span>
                      </div>
+                     
+                     {order.status === 'pending' && (
+                        (() => {
+                          const elapsedMinutes = (new Date().getTime() - new Date(order.createdAt).getTime()) / (1000 * 60);
+                          const canCancel = elapsedMinutes >= 5;
+                          return (
+                            <div className="z-10 mt-2 border-t border-white/10 pt-4 flex justify-between items-center w-full">
+                              <p className="text-xs text-zinc-400 font-medium">
+                                {canCancel ? "Changed your mind?" : `Can cancel in ${Math.max(0, Math.ceil(5 - elapsedMinutes))} min if not confirmed`}
+                              </p>
+                              {canCancel && (
+                                <button 
+                                  onClick={async (e) => { 
+                                    e.preventDefault(); 
+                                    try {
+                                      const res = await fetch(`${API_URL}/api/users/orders/${order._id}/cancel`, {
+                                        method: 'PUT',
+                                        headers: { 'Authorization': `Bearer ${userToken}` }
+                                      });
+                                      if (res.ok) {
+                                        toast.success("Order cancelled");
+                                        setActiveOrders(prev => prev.map(o => o._id === order._id ? { ...o, status: 'cancelled' } : o));
+                                      } else {
+                                        toast.error("Cannot cancel. Restaurant may have already accepted.");
+                                      }
+                                    } catch (err) {
+                                      toast.error("Network error");
+                                    }
+                                  }}
+                                  className="text-xs font-bold bg-white/10 hover:bg-red-500/20 hover:text-red-400 text-white px-4 py-2 rounded-xl transition-colors border border-white/10 active:scale-95"
+                                >
+                                  Cancel Order
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })()
+                     )}
                    </div>
                  )
               })}
@@ -853,11 +900,22 @@ export default function UserHomePage() {
                         </div>
 
                         <div className="flex items-center gap-2">
-                          {cartItem ? (
+                          {product.variants && product.variants.length > 0 ? (
+                            <button 
+                              onClick={() => {
+                                setCustomizingProduct(product);
+                                setSelectedVariant(product.variants[0]);
+                              }}
+                              className="h-9 px-6 flex items-center justify-center rounded-xl text-white font-black uppercase tracking-widest text-[10px] transition-all hover:opacity-90 active:scale-95 shadow-md hover:shadow-lg animate-pulse"
+                              style={getGradientStyle(shop.themeColors || [shop.themeColor])}
+                            >
+                              Customize
+                            </button>
+                          ) : cartItem ? (
                             <div className="h-9 flex items-center justify-between rounded-xl p-1 bg-zinc-50 border border-zinc-200 shadow-inner">
-                              <button onClick={() => updateQuantity(product._id, -1)} className="w-7 h-7 flex items-center justify-center rounded-lg bg-white text-zinc-900 shadow-sm font-bold">-</button>
+                              <button onClick={() => updateQuantity(product._id, -1, undefined)} className="w-7 h-7 flex items-center justify-center rounded-lg bg-white text-zinc-900 shadow-sm font-bold">-</button>
                               <span className="font-black text-sm w-8 text-center text-zinc-900">{cartItem.quantity}</span>
-                              <button onClick={() => updateQuantity(product._id, 1)} className="w-7 h-7 flex items-center justify-center rounded-lg text-white shadow-sm font-bold" style={getGradientStyle(shop.themeColors || [shop.themeColor])}>+</button>
+                              <button onClick={() => updateQuantity(product._id, 1, undefined)} className="w-7 h-7 flex items-center justify-center rounded-lg text-white shadow-sm font-bold" style={getGradientStyle(shop.themeColors || [shop.themeColor])}>+</button>
                             </div>
                           ) : (
                             <button 
@@ -942,12 +1000,12 @@ export default function UserHomePage() {
                     <div key={i} className="flex gap-4 bg-white p-4 rounded-2xl shadow-sm border border-zinc-100">
                       <img src={item.image || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&q=80"} alt={item.name} className="w-20 h-20 rounded-xl object-cover" />
                       <div className="flex-1 flex flex-col justify-center">
-                        <h4 className="font-bold text-zinc-900 leading-tight mb-1">{item.name}</h4>
+                        <h4 className="font-bold text-zinc-900 leading-tight mb-1">{item.name}{item.variant && ` (${item.variant})`}</h4>
                         <span className="font-black text-zinc-900 mb-3">₹{item.price}</span>
                         <div className="flex items-center gap-3 bg-zinc-50 w-fit px-2 py-1 rounded-xl border border-zinc-200">
-                          <button onClick={() => updateQuantity(item._id, -1)} className="w-6 h-6 rounded-md bg-white flex items-center justify-center shadow-sm"><Minus className="w-3 h-3" /></button>
+                          <button onClick={() => updateQuantity(item._id, -1, item.variant)} className="w-6 h-6 rounded-md bg-white flex items-center justify-center shadow-sm"><Minus className="w-3 h-3" /></button>
                           <span className="font-black text-sm w-4 text-center">{item.quantity}</span>
-                          <button onClick={() => updateQuantity(item._id, 1)} className="w-6 h-6 rounded-md bg-zinc-900 text-white flex items-center justify-center shadow-sm"><Plus className="w-3 h-3" /></button>
+                          <button onClick={() => updateQuantity(item._id, 1, item.variant)} className="w-6 h-6 rounded-md bg-zinc-900 text-white flex items-center justify-center shadow-sm"><Plus className="w-3 h-3" /></button>
                         </div>
                       </div>
                     </div>
@@ -987,6 +1045,102 @@ export default function UserHomePage() {
           setIsCheckoutOpen(true);
         }} 
       />
+
+      {/* Dynamic Variant Selector Modal */}
+      <AnimatePresence>
+        {customizingProduct && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center px-4">
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              className="absolute inset-0 bg-zinc-900/60 backdrop-blur-md" 
+              onClick={() => setCustomizingProduct(null)} 
+            />
+            
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }} 
+              animate={{ opacity: 1, scale: 1, y: 0 }} 
+              exit={{ opacity: 0, scale: 0.9, y: 20 }} 
+              className="w-full max-w-md rounded-[2.5rem] relative z-10 overflow-hidden bg-white/95 backdrop-blur-xl shadow-2xl flex flex-col border border-zinc-100"
+            >
+              <div className="h-2 w-full shrink-0" style={getGradientStyle(customizingProduct.shop_id?.themeColors || [customizingProduct.shop_id?.themeColor])} />
+              
+              <div className="p-8">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1">Customize Options</span>
+                    <h3 className="text-2xl font-black text-zinc-900 tracking-tighter leading-none">{customizingProduct.name}</h3>
+                  </div>
+                  <button onClick={() => setCustomizingProduct(null)} className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500 hover:text-zinc-900 transition-colors">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="relative w-full aspect-[16/10] rounded-2xl overflow-hidden mb-6 bg-zinc-50 border border-zinc-100">
+                  <img src={customizingProduct.image} alt={customizingProduct.name} className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                  <p className="absolute bottom-4 left-4 right-4 text-xs font-bold text-white/95 line-clamp-2 leading-relaxed">{customizingProduct.description || "Freshly prepared with premium ingredients."}</p>
+                </div>
+
+                <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-4 ml-1">Select Portion / Size</span>
+                
+                <div className="space-y-3 mb-8">
+                  {customizingProduct.variants?.map((v: any, idx: number) => {
+                    const isSelected = selectedVariant?.name === v.name;
+                    return (
+                      <div 
+                        key={idx}
+                        onClick={() => setSelectedVariant(v)}
+                        className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between group ${
+                          isSelected 
+                            ? 'border-zinc-900 bg-zinc-900 text-white shadow-md' 
+                            : 'border-zinc-100 hover:border-zinc-200 bg-zinc-50/50 hover:bg-zinc-50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${isSelected ? 'border-white bg-white' : 'border-zinc-300'}`}>
+                            {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-zinc-900" />}
+                          </div>
+                          <span className="font-bold text-sm">{v.name}</span>
+                        </div>
+                        <span className={`font-black text-base ${isSelected ? 'text-white' : 'text-zinc-900'}`}>₹{v.price}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="flex gap-4">
+                  <button 
+                    onClick={() => {
+                      addToCart(customizingProduct, selectedVariant);
+                      setCustomizingProduct(null);
+                    }}
+                    className="flex-1 py-4 rounded-2xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-black uppercase tracking-widest text-[11px] transition-all active:scale-95 border border-zinc-200"
+                  >
+                    Add to Cart
+                  </button>
+                  <button 
+                    onClick={() => {
+                      addToCart(customizingProduct, selectedVariant);
+                      setCustomizingProduct(null);
+                      if (!userToken && !localStorage.getItem("userToken")) {
+                        setIsLoginModalOpen(true);
+                      } else {
+                        setIsCheckoutOpen(true);
+                      }
+                    }}
+                    className="flex-1 py-4 rounded-2xl text-white font-black uppercase tracking-widest text-[11px] transition-all hover:opacity-90 active:scale-95 shadow-lg shadow-zinc-900/10"
+                    style={getGradientStyle(customizingProduct.shop_id?.themeColors || [customizingProduct.shop_id?.themeColor])}
+                  >
+                    Order Now
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {isCheckoutOpen && cart.length > 0 && (
         <CheckoutModal 

@@ -36,6 +36,12 @@ export default function SettingsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+  
+  // Telegram
+  const [isTelegramLinked, setIsTelegramLinked] = useState(false);
+  const [isLinkingTelegram, setIsLinkingTelegram] = useState(false);
+
   // Massive color palette for premium customization
   const availableColors = [
     // Purples/Pinks
@@ -253,6 +259,29 @@ export default function SettingsPage() {
       toast.error("Network error");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleLinkTelegram = async () => {
+    setIsLinkingTelegram(true);
+    try {
+      const token = localStorage.getItem("sellerToken");
+      const res = await fetch(`${API_URL}/api/telegram/link-token`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setIsTelegramLinked(data.isLinked);
+        if (data.linkUrl) {
+          window.open(data.linkUrl, "_blank");
+        }
+      } else {
+        toast.error("Failed to generate Telegram link");
+      }
+    } catch (error) {
+      toast.error("Network error connecting to Telegram");
+    } finally {
+      setIsLinkingTelegram(false);
     }
   };
 
@@ -698,11 +727,55 @@ export default function SettingsPage() {
               <motion.div 
                 key="notifications"
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-                className="bg-card border border-border rounded-2xl p-12 shadow-sm text-center"
+                className="bg-card border border-border rounded-2xl p-6 shadow-sm space-y-6"
               >
-                <Bell className="w-12 h-12 text-zinc-300 mx-auto mb-4" />
-                <h3 className="text-xl font-bold mb-2">Notification Settings</h3>
-                <p className="text-muted-foreground">Notification preferences will be available in Phase 3.</p>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-12 h-12 bg-blue-500/10 rounded-full flex items-center justify-center">
+                    <Bell className="w-6 h-6 text-blue-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold flex items-center gap-2">Order Notifications</h3>
+                    <p className="text-sm text-muted-foreground">Get instant alerts even when the app is closed.</p>
+                  </div>
+                </div>
+
+                <div className="p-6 bg-[#0088cc]/5 border border-[#0088cc]/20 rounded-2xl">
+                  <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-6">
+                    <div className="flex-1 text-center md:text-left">
+                      <h4 className="font-black text-[#0088cc] text-lg mb-2">Connect Telegram Bot 🤖</h4>
+                      <p className="text-sm text-foreground/80 font-medium leading-relaxed mb-4">
+                        Never miss an order! Get loud alerts directly on your Telegram app. Best of all, you can <b>Accept or Reject</b> orders directly from the notification message without even opening this dashboard!
+                      </p>
+                      
+                      <button 
+                        onClick={handleLinkTelegram}
+                        disabled={isLinkingTelegram}
+                        className="inline-flex items-center gap-2 bg-[#0088cc] hover:bg-[#0077b3] text-white px-6 py-3 rounded-xl font-bold transition-all shadow-md hover:shadow-lg active:scale-95 disabled:opacity-50"
+                      >
+                        {isLinkingTelegram ? <Loader2 className="w-5 h-5 animate-spin" /> : <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.223-.548.223l.188-2.85 5.18-4.686c.223-.195-.054-.298-.344-.105l-6.4 4.032-2.76-.864c-.6-.188-.61-.6.126-.893l10.79-4.164c.5-.195.94.116.827.845z"/></svg>}
+                        {isTelegramLinked ? "Re-connect Telegram" : "Connect Telegram Alerts"}
+                      </button>
+                    </div>
+                    {/* Visual demo for Telegram */}
+                    <div className="w-64 shrink-0 bg-white dark:bg-zinc-900 rounded-2xl border border-border shadow-xl p-3 transform rotate-2 hidden md:block">
+                      <div className="flex items-center gap-2 mb-3 border-b border-border pb-2">
+                        <div className="w-8 h-8 rounded-full bg-[#0088cc] flex items-center justify-center text-white font-black text-xs">bot</div>
+                        <div>
+                          <p className="text-[10px] font-bold">FoodUniverse Bot</p>
+                          <p className="text-[8px] text-[#0088cc]">bot</p>
+                        </div>
+                      </div>
+                      <div className="bg-[#0088cc]/10 p-2 rounded-lg mb-2">
+                        <p className="text-[10px] font-bold">🚨 NEW ORDER RECEIVED!</p>
+                        <p className="text-[9px] mt-1 text-muted-foreground">Amount: ₹199</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <div className="flex-1 bg-green-500/20 text-green-600 text-center py-1.5 rounded-md text-[9px] font-bold">✅ Accept</div>
+                        <div className="flex-1 bg-red-500/20 text-red-600 text-center py-1.5 rounded-md text-[9px] font-bold">❌ Reject</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>

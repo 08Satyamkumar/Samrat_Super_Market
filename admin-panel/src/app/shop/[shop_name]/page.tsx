@@ -21,6 +21,8 @@ export default function PublicShopPage() {
   const [shopInfo, setShopInfo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [cart, setCart] = useState<any[]>([]);
+  const [customizingProduct, setCustomizingProduct] = useState<any | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState<any | null>(null);
   
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -58,28 +60,36 @@ export default function PublicShopPage() {
     };
   };
 
-  const addToCart = (item: any) => {
+  const addToCart = (item: any, selectedVariant?: any) => {
+    const variantName = selectedVariant ? selectedVariant.name : undefined;
+
     setCart((prev) => {
-      const existing = prev.find((c) => c._id === item._id);
+      const existing = prev.find((c) => c._id === item._id && c.variant === variantName);
       if (existing) {
-        return prev.map((c) => c._id === item._id ? { ...c, quantity: c.quantity + 1 } : c);
+        return prev.map((c) => (c._id === item._id && c.variant === variantName) ? { ...c, quantity: c.quantity + 1 } : c);
       }
-      return [...prev, { ...item, quantity: 1 }];
+      toast.success(`${item.name}${variantName ? ` (${variantName})` : ''} added to cart`);
+      return [...prev, { 
+        ...item, 
+        price: selectedVariant ? Number(selectedVariant.price) : item.price, 
+        variant: variantName, 
+        quantity: 1 
+      }];
     });
   };
 
-  const removeFromCart = (itemId: string) => {
+  const removeFromCart = (itemId: string, variant?: string) => {
     setCart((prev) => {
-      const existing = prev.find((c) => c._id === itemId);
+      const existing = prev.find((c) => c._id === itemId && c.variant === variant);
       if (existing && existing.quantity > 1) {
-        return prev.map((c) => c._id === itemId ? { ...c, quantity: c.quantity - 1 } : c);
+        return prev.map((c) => (c._id === itemId && c.variant === variant) ? { ...c, quantity: c.quantity - 1 } : c);
       }
-      return prev.filter((c) => c._id !== itemId);
+      return prev.filter((c) => !(c._id === itemId && c.variant === variant));
     });
   };
 
-  const getCartQuantity = (itemId: string) => {
-    const item = cart.find(c => c._id === itemId);
+  const getCartQuantity = (itemId: string, variant?: string) => {
+    const item = cart.find(c => c._id === itemId && c.variant === variant);
     return item ? item.quantity : 0;
   };
 
@@ -333,6 +343,17 @@ export default function PublicShopPage() {
                          <button disabled className="h-9 px-4 rounded-xl bg-zinc-100 text-zinc-400 text-[10px] font-black uppercase tracking-widest cursor-not-allowed">
                            {shopInfo?.isOpen === false ? 'Closed' : 'Sold Out'}
                          </button>
+                      ) : item.variants && item.variants.length > 0 ? (
+                        <button 
+                          onClick={() => {
+                            setCustomizingProduct(item);
+                            setSelectedVariant(item.variants[0]);
+                          }}
+                          className="h-9 px-6 flex items-center justify-center rounded-xl text-white font-black uppercase tracking-widest text-[10px] transition-all hover:opacity-90 active:scale-95 shadow-md hover:shadow-lg animate-pulse"
+                          style={getGradientStyle()}
+                        >
+                          Customize
+                        </button>
                       ) : getCartQuantity(item._id) > 0 ? (
                         <div className="h-9 flex items-center justify-between rounded-xl p-1 bg-zinc-50 border border-zinc-200 shadow-inner">
                           <button onClick={() => removeFromCart(item._id)} className="w-7 h-7 flex items-center justify-center rounded-lg bg-white text-zinc-900 shadow-sm font-bold">-</button>
@@ -342,7 +363,11 @@ export default function PublicShopPage() {
                       ) : (
                         <div className="flex items-center gap-1.5">
                           <button 
-                            onClick={() => { if (getCartQuantity(item._id) === 0) addToCart(item); setIsCheckoutOpen(true); }}
+                            onClick={() => { 
+                              if (getCartQuantity(item._id) === 0) addToCart(item); 
+                              if (!userToken && !localStorage.getItem("userToken")) setIsLoginModalOpen(true);
+                              else setIsCheckoutOpen(true);
+                            }}
                             className="h-9 px-5 flex items-center justify-center rounded-xl text-white font-black uppercase tracking-widest text-[10px] transition-all hover:opacity-90 active:scale-95 shadow-md hover:shadow-lg"
                             style={getGradientStyle()}
                           >
@@ -496,17 +521,17 @@ export default function PublicShopPage() {
                 ) : (
                   <div className="space-y-6">
                     {cart.map((item) => (
-                      <div key={item._id} className="flex gap-4 p-3 rounded-3xl bg-zinc-50 border border-zinc-100">
+                      <div key={`${item._id}-${item.variant || 'default'}`} className="flex gap-4 p-3 rounded-3xl bg-zinc-50 border border-zinc-100">
                         <img src={item.image} alt={item.name} className="w-24 h-24 rounded-2xl object-cover" />
                         <div className="flex-1 flex flex-col justify-between py-1 pr-2">
                           <div>
-                            <h4 className="font-bold text-zinc-900 line-clamp-1">{item.name}</h4>
+                            <h4 className="font-bold text-zinc-900 line-clamp-1">{item.name}{item.variant && ` (${item.variant})`}</h4>
                             <span className="font-black text-lg" style={getTextGradient()}>₹{item.price * item.quantity}</span>
                           </div>
                           <div className="flex items-center gap-3 bg-white rounded-xl p-1 w-max border border-zinc-200 shadow-sm">
-                            <button onClick={() => removeFromCart(item._id)} className="w-8 h-8 rounded-lg bg-zinc-100 text-zinc-900 font-black hover:bg-zinc-200">-</button>
+                            <button onClick={() => removeFromCart(item._id, item.variant)} className="w-8 h-8 rounded-lg bg-zinc-100 text-zinc-900 font-black hover:bg-zinc-200">-</button>
                             <span className="font-black text-sm w-4 text-center text-zinc-900">{item.quantity}</span>
-                            <button onClick={() => addToCart(item)} className="w-8 h-8 rounded-lg text-white font-black" style={getGradientStyle()}>+</button>
+                            <button onClick={() => addToCart(item, item.variant ? { name: item.variant, price: item.price } : undefined)} className="w-8 h-8 rounded-lg text-white font-black" style={getGradientStyle()}>+</button>
                           </div>
                         </div>
                       </div>
@@ -528,6 +553,102 @@ export default function PublicShopPage() {
               )}
             </motion.div>
           </>
+        )}
+      </AnimatePresence>
+
+      {/* Dynamic Variant Selector Modal */}
+      <AnimatePresence>
+        {customizingProduct && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center px-4">
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              className="absolute inset-0 bg-zinc-900/60 backdrop-blur-md" 
+              onClick={() => setCustomizingProduct(null)} 
+            />
+            
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }} 
+              animate={{ opacity: 1, scale: 1, y: 0 }} 
+              exit={{ opacity: 0, scale: 0.9, y: 20 }} 
+              className="w-full max-w-md rounded-[2.5rem] relative z-10 overflow-hidden bg-white/95 backdrop-blur-xl shadow-2xl flex flex-col border border-zinc-100"
+            >
+              <div className="h-2 w-full shrink-0" style={getGradientStyle()} />
+              
+              <div className="p-8">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-1">Customize Options</span>
+                    <h3 className="text-2xl font-black text-zinc-900 tracking-tighter leading-none">{customizingProduct.name}</h3>
+                  </div>
+                  <button onClick={() => setCustomizingProduct(null)} className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500 hover:text-zinc-900 transition-colors">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="relative w-full aspect-[16/10] rounded-2xl overflow-hidden mb-6 bg-zinc-50 border border-zinc-100">
+                  <img src={customizingProduct.image} alt={customizingProduct.name} className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                  <p className="absolute bottom-4 left-4 right-4 text-xs font-bold text-white/95 line-clamp-2 leading-relaxed">{customizingProduct.description || "Freshly prepared with premium ingredients."}</p>
+                </div>
+
+                <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-4 ml-1">Select Portion / Size</span>
+                
+                <div className="space-y-3 mb-8">
+                  {customizingProduct.variants?.map((v: any, idx: number) => {
+                    const isSelected = selectedVariant?.name === v.name;
+                    return (
+                      <div 
+                        key={idx}
+                        onClick={() => setSelectedVariant(v)}
+                        className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between group ${
+                          isSelected 
+                            ? 'border-zinc-900 bg-zinc-900 text-white shadow-md' 
+                            : 'border-zinc-100 hover:border-zinc-200 bg-zinc-50/50 hover:bg-zinc-50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${isSelected ? 'border-white bg-white' : 'border-zinc-300'}`}>
+                            {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-zinc-900" />}
+                          </div>
+                          <span className="font-bold text-sm">{v.name}</span>
+                        </div>
+                        <span className={`font-black text-base ${isSelected ? 'text-white' : 'text-zinc-900'}`}>₹{v.price}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="flex gap-4">
+                  <button 
+                    onClick={() => {
+                      addToCart(customizingProduct, selectedVariant);
+                      setCustomizingProduct(null);
+                    }}
+                    className="flex-1 py-4 rounded-2xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-black uppercase tracking-widest text-[11px] transition-all active:scale-95 border border-zinc-200"
+                  >
+                    Add to Cart
+                  </button>
+                  <button 
+                    onClick={() => {
+                      addToCart(customizingProduct, selectedVariant);
+                      setCustomizingProduct(null);
+                      if (!userToken && !localStorage.getItem("userToken")) {
+                        setIsLoginModalOpen(true);
+                      } else {
+                        setIsCheckoutOpen(true);
+                      }
+                    }}
+                    className="flex-1 py-4 rounded-2xl text-white font-black uppercase tracking-widest text-[11px] transition-all hover:opacity-90 active:scale-95 shadow-lg shadow-zinc-900/10"
+                    style={getGradientStyle()}
+                  >
+                    Order Now
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 

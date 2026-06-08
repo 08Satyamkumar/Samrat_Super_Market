@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Loader2, CheckCircle2, Bike, PackageOpen, Utensils } from "lucide-react";
+import { X, Loader2, CheckCircle2, Bike, PackageOpen, Utensils, Camera, Upload } from "lucide-react";
 import { API_URL } from "@/lib/api";
 
 interface CheckoutModalProps {
@@ -39,26 +39,31 @@ export function CheckoutModal({
   const [orderType, setOrderType] = useState<'delivery' | 'pickup' | 'dine-in'>('delivery');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
+  const [paymentProof, setPaymentProof] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handlePlaceOrder = async () => {
     if (!customerName || !customerPhone || cart.length === 0) return;
     setIsPlacingOrder(true);
     try {
       const activeShopId = shopInfo?._id || cart[0].shop_id?._id || cart[0].shop_id;
-      const orderData = {
-        userId: userId || null,
-        customerName, 
-        customerPhone,
-        orderItems: cart.map(item => ({ name: item.name, qty: item.quantity, image: item.image, price: item.price, product_id: item._id })),
-        total_amount: totalPrice,
-        paymentMethod: paymentMethod === 'upi' ? 'Online/UPI' : 'Cash on Delivery',
-        orderType
-      };
+      
+      const formData = new FormData();
+      if (userId) formData.append('userId', userId);
+      formData.append('customerName', customerName);
+      formData.append('customerPhone', customerPhone);
+      formData.append('orderItems', JSON.stringify(cart.map(item => ({ name: item.name, qty: item.quantity, image: item.image, price: item.price, product_id: item._id, variant: item.variant || null }))));
+      formData.append('total_amount', totalPrice.toString());
+      formData.append('paymentMethod', paymentMethod === 'upi' ? 'Online/UPI' : 'Cash on Delivery');
+      formData.append('orderType', orderType);
+      
+      if (paymentMethod === 'upi' && paymentProof) {
+        formData.append('paymentProof', paymentProof);
+      }
 
       const res = await fetch(`${API_URL}/api/shops/${activeShopId}/orders`, {
         method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify(orderData)
+        body: formData
       });
       
       if (res.ok) {
@@ -164,11 +169,60 @@ export function CheckoutModal({
                       {paymentMethod === 'upi' && shopInfo?.upiId && (
                         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
                           <div className="bg-zinc-50 border border-zinc-100 rounded-3xl p-6 flex flex-col items-center text-center mt-4">
-                            <div className="p-3 bg-white rounded-2xl shadow-sm border border-zinc-200 mb-4">
-                              <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=${shopInfo.upiId}&pn=${encodeURIComponent(shopInfo.name)}`} alt="UPI QR Code" className="w-32 h-32" />
+                            <h3 className="font-bold text-zinc-800 mb-4">Pay securely via UPI</h3>
+                            
+                            {/* Mobile Deep Link Button */}
+                            <a 
+                              href={`upi://pay?pa=${shopInfo.upiId}&pn=${encodeURIComponent(shopInfo.name)}&am=${totalPrice}`}
+                              className="w-full py-4 mb-6 rounded-xl text-white font-black uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all lg:hidden"
+                              style={gradientStyle}
+                            >
+                              Pay via UPI App
+                            </a>
+
+                            <div className="hidden lg:flex flex-col items-center w-full">
+                              <div className="p-3 bg-white rounded-2xl shadow-sm border border-zinc-200 mb-4">
+                                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=${shopInfo.upiId}&pn=${encodeURIComponent(shopInfo.name)}&am=${totalPrice}`} alt="UPI QR Code" className="w-32 h-32" />
+                              </div>
+                              <p className="font-mono font-bold text-zinc-900 bg-white border border-zinc-200 px-4 py-2 rounded-xl shadow-sm">{shopInfo.upiId}</p>
+                              <p className="text-[10px] text-zinc-400 uppercase tracking-widest mt-4 font-bold">Scan using PhonePe, GPay or Paytm</p>
                             </div>
-                            <p className="font-mono font-bold text-zinc-900 bg-white border border-zinc-200 px-4 py-2 rounded-xl shadow-sm">{shopInfo.upiId}</p>
-                            <p className="text-[10px] text-zinc-400 uppercase tracking-widest mt-4 font-bold">Scan using PhonePe, GPay or Paytm</p>
+                            
+                            <div className="w-full mt-2 pt-4 border-t border-zinc-200">
+                              <p className="text-xs font-bold text-zinc-600 mb-3 block">Faster Verification? (Optional)</p>
+                              
+                              <input 
+                                type="file" 
+                                accept="image/*" 
+                                className="hidden" 
+                                ref={fileInputRef}
+                                onChange={(e) => {
+                                  if (e.target.files && e.target.files[0]) {
+                                    setPaymentProof(e.target.files[0]);
+                                  }
+                                }}
+                              />
+                              
+                              <button 
+                                onClick={() => fileInputRef.current?.click()}
+                                className={`w-full py-3 rounded-xl border-2 border-dashed flex items-center justify-center gap-2 transition-all text-sm font-bold ${
+                                  paymentProof 
+                                    ? 'border-emerald-500 bg-emerald-50 text-emerald-600' 
+                                    : 'border-zinc-300 bg-white text-zinc-500 hover:border-violet-500 hover:bg-violet-50 hover:text-violet-600'
+                                }`}
+                              >
+                                {paymentProof ? (
+                                  <><CheckCircle2 className="w-4 h-4" /> Screenshot Attached</>
+                                ) : (
+                                  <><Upload className="w-4 h-4" /> Upload Payment Screenshot</>
+                                )}
+                              </button>
+                            </div>
+                            
+                            {/* Instruction after Deep Link */}
+                            <p className="text-xs text-zinc-500 font-medium mt-4 lg:hidden">
+                              After paying in your app, return here to place your order.
+                            </p>
                           </div>
                         </motion.div>
                       )}
@@ -180,7 +234,7 @@ export function CheckoutModal({
                     className="w-full shrink-0 py-5 rounded-2xl text-white font-black uppercase tracking-widest text-lg hover:shadow-xl hover:-translate-y-1 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
                     style={gradientStyle}
                   >
-                    {isPlacingOrder ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Place Order Now'}
+                    {isPlacingOrder ? <Loader2 className="w-6 h-6 animate-spin" /> : (paymentMethod === 'upi' ? 'I Have Paid & Place Order' : 'Place Order Now')}
                   </button>
                 </>
               )}

@@ -461,9 +461,14 @@ export const updateProduct = async (req: SellerRequest, res: Response): Promise<
     const productId = req.params.id;
     const shopId = req.seller.shop_id;
 
+    const updateData = { ...req.body };
+    if (updateData.variants && updateData.variants.length > 0) {
+      updateData.price = Number(updateData.variants[0].price);
+    }
+
     const product = await Product.findOneAndUpdate(
       { _id: productId, shop_id: shopId },
-      req.body,
+      updateData,
       { new: true }
     );
 
@@ -599,6 +604,23 @@ export const getSellerOrders = async (req: SellerRequest, res: Response): Promis
       return;
     }
     const shopId = req.seller.shop_id;
+    
+    // Auto-Cancel Logic: Any pending order older than 10 minutes is cancelled
+    const timeoutThreshold = new Date(Date.now() - 10 * 60 * 1000); // 10 minutes ago
+    await Order.updateMany(
+      { 
+        shop_id: shopId, 
+        status: 'pending', 
+        createdAt: { $lt: timeoutThreshold } 
+      },
+      { 
+        $set: { 
+          status: 'cancelled', 
+          cancelReason: 'Restaurant Unresponsive (Timeout)' 
+        } 
+      }
+    );
+
     // Fetch orders for this shop, newest first
     const orders = await Order.find({ shop_id: shopId }).sort({ createdAt: -1 });
 
@@ -761,9 +783,9 @@ export const addProduct = async (req: SellerRequest, res: Response): Promise<voi
       return;
     }
 
-    const { name, price, category, description } = req.body;
+    const { name, price, category, description, variants } = req.body;
     
-    if (!name || !price) {
+    if (!name || (!price && (!variants || variants.length === 0))) {
       res.status(400).json({ message: 'Name and price are required' });
       return;
     }
@@ -772,14 +794,15 @@ export const addProduct = async (req: SellerRequest, res: Response): Promise<voi
 
     const newProduct = new Product({
       name,
-      price: Number(price),
+      price: variants && variants.length > 0 ? Number(variants[0].price) : Number(price),
       category: category || 'general',
       description: description || '',
       shop_id: shopId,
       seller_id: req.seller._id,
       image: getPremiumImage(name),
       isAvailable: true,
-      isAIGenerated: true // We use true here so the UI shows the 'Add Real Photo' camera button
+      isAIGenerated: true, // We use true here so the UI shows the 'Add Real Photo' camera button
+      variants: variants || []
     });
 
     await newProduct.save();

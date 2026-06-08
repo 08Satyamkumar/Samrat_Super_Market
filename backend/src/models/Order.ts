@@ -31,6 +31,10 @@ const orderSchema = new mongoose.Schema(
           ref: 'Product',
           required: true,
         },
+        variant: {
+          type: String,
+          default: null
+        }
       },
     ],
     total_amount: {
@@ -77,6 +81,19 @@ const orderSchema = new mongoose.Schema(
     isSellerNotified: {
       type: Boolean,
       default: false,
+    },
+    paymentProofImage: {
+      type: String,
+      default: null,
+    },
+    aiVerificationStatus: {
+      type: String,
+      enum: ['none', 'pending', 'verified', 'flagged'],
+      default: 'none',
+    },
+    aiVerificationMessage: {
+      type: String,
+      default: '',
     },
   },
   {

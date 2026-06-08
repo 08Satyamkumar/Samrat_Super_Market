@@ -104,6 +104,22 @@ export const getUserOrders = async (req: UserRequest, res: Response): Promise<vo
       return;
     }
 
+    // Auto-Cancel Logic: Any pending order older than 10 minutes is cancelled
+    const timeoutThreshold = new Date(Date.now() - 10 * 60 * 1000); // 10 minutes ago
+    await Order.updateMany(
+      { 
+        user_id: req.user._id, 
+        status: 'pending', 
+        createdAt: { $lt: timeoutThreshold } 
+      },
+      { 
+        $set: { 
+          status: 'cancelled', 
+          cancelReason: 'Restaurant Unresponsive (Timeout)' 
+        } 
+      }
+    );
+
     const orders = await Order.find({ user_id: req.user._id })
       .populate('shop_id', 'name logo themeColors themeColor')
       .sort({ createdAt: -1 });
@@ -111,6 +127,39 @@ export const getUserOrders = async (req: UserRequest, res: Response): Promise<vo
     res.status(200).json(orders);
   } catch (error) {
     console.error('Error fetching user orders:', error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+};
+
+// @desc    Cancel user order
+// @route   PUT /api/users/orders/:id/cancel
+// @access  Private (User)
+export const cancelUserOrder = async (req: UserRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ message: 'User not found' });
+      return;
+    }
+
+    const { id } = req.params;
+    const order = await Order.findOne({ _id: id, user_id: req.user._id });
+
+    if (!order) {
+      res.status(404).json({ message: 'Order not found' });
+      return;
+    }
+
+    if (order.status !== 'pending') {
+      res.status(400).json({ message: 'Order cannot be cancelled. Restaurant has already accepted it.' });
+      return;
+    }
+
+    order.status = 'cancelled';
+    await order.save();
+
+    res.status(200).json({ message: 'Order cancelled successfully', order });
+  } catch (error) {
+    console.error('Error cancelling order:', error);
     res.status(500).json({ message: 'Server Error' });
   }
 };
