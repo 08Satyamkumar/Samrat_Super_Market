@@ -24,6 +24,7 @@ export default function SettingsPage() {
   const [estimatedDeliveryTime, setEstimatedDeliveryTime] = useState("30-45 mins");
   const [shopType, setShopType] = useState('restaurant');
   const [allowsDineIn, setAllowsDineIn] = useState(false);
+  const [minimumOrderAmount, setMinimumOrderAmount] = useState<number>(0);
   const [location, setLocation] = useState<{coordinates: number[]}>({ coordinates: [0, 0] });
   const [isFetchingLocation, setIsFetchingLocation] = useState(false);
   
@@ -107,6 +108,7 @@ export default function SettingsPage() {
           if (data.shop.shopType) setShopType(data.shop.shopType);
           if (data.shop.allowsDineIn !== undefined) setAllowsDineIn(data.shop.allowsDineIn);
           if (data.shop.location) setLocation(data.shop.location);
+          if (data.shop.minimumOrderAmount !== undefined) setMinimumOrderAmount(data.shop.minimumOrderAmount);
         }
       }
     } catch (error) {
@@ -247,7 +249,8 @@ export default function SettingsPage() {
           tagline,
           shopType,
           allowsDineIn,
-          location
+          location,
+          minimumOrderAmount
         })
       });
       if (res.ok) {
@@ -676,15 +679,28 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-bold mb-2">Estimated Delivery Time (Displayed to Users)</label>
-                  <input 
-                    type="text" 
-                    value={estimatedDeliveryTime}
-                    onChange={(e) => setEstimatedDeliveryTime(e.target.value)}
-                    placeholder="e.g. 30-45 mins" 
-                    className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-violet-500/50"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-bold mb-2">Estimated Delivery Time (Displayed to Users)</label>
+                    <input 
+                      type="text" 
+                      value={estimatedDeliveryTime}
+                      onChange={(e) => setEstimatedDeliveryTime(e.target.value)}
+                      placeholder="e.g. 30-45 mins" 
+                      className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-violet-500/50"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold mb-2">Minimum Order Value (₹)</label>
+                    <input 
+                      type="number" 
+                      value={minimumOrderAmount}
+                      onChange={(e) => setMinimumOrderAmount(Math.max(0, Number(e.target.value)))}
+                      placeholder="e.g. 150 (0 for no limit)" 
+                      min="0"
+                      className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-violet-500/50"
+                    />
+                  </div>
                 </div>
               </motion.div>
             )}

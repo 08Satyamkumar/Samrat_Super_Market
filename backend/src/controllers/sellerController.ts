@@ -543,7 +543,7 @@ export const getShopSettings = async (req: SellerRequest, res: Response): Promis
       return;
     }
     const shopId = req.seller.shop_id;
-    const shop = await Shop.findById(shopId).select('isOpen openingTime closingTime estimatedDeliveryTime upiId qrCodeImage logo bannerImage tagline themeColor themeColors shopType allowsDineIn location');
+    const shop = await Shop.findById(shopId).select('isOpen openingTime closingTime estimatedDeliveryTime upiId qrCodeImage logo bannerImage tagline themeColor themeColors shopType allowsDineIn location minimumOrderAmount');
 
     if (!shop) {
       res.status(404).json({ message: 'Shop not found' });
@@ -564,9 +564,11 @@ export const updateShopSettings = async (req: SellerRequest, res: Response): Pro
       return;
     }
     const shopId = req.seller.shop_id;
-    const { isOpen, openingTime, closingTime, estimatedDeliveryTime, upiId, qrCodeImage, themeColor, themeColors, tagline, shopType, allowsDineIn, location } = req.body;
+    const { isOpen, openingTime, closingTime, estimatedDeliveryTime, upiId, qrCodeImage, themeColor, themeColors, tagline, shopType, allowsDineIn, location, minimumOrderAmount } = req.body;
 
     const updateData: any = { isOpen, openingTime, closingTime, estimatedDeliveryTime, upiId, qrCodeImage, themeColor, themeColors, tagline };
+    
+    if (minimumOrderAmount !== undefined) updateData.minimumOrderAmount = Number(minimumOrderAmount);
     
     if (shopType) updateData.shopType = shopType;
     if (allowsDineIn !== undefined) updateData.allowsDineIn = allowsDineIn;

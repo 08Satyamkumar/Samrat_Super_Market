@@ -87,6 +87,10 @@ const shopSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    minimumOrderAmount: {
+      type: Number,
+      default: 0,
+    },
     location: {
       type: {
         type: String,

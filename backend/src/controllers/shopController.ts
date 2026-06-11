@@ -95,7 +95,7 @@ export const getAllPublicProducts = async (req: Request, res: Response): Promise
     const products = await Product.find(productQuery).populate({
       path: 'shop_id',
       match: { status: 'active' },
-      select: 'name logo themeColor themeColors shopSlug estimatedDeliveryTime upiId shopType location allowsDineIn'
+      select: 'name logo themeColor themeColors shopSlug estimatedDeliveryTime upiId shopType location allowsDineIn minimumOrderAmount'
     });
 
     const validProducts = products.filter(p => p.shop_id != null);
@@ -147,7 +147,7 @@ export const getAllActiveShops = async (req: Request, res: Response): Promise<vo
       geoNearQuery.push({
         $project: {
           name: 1, logo: 1, bannerImage: 1, themeColors: 1, themeColor: 1,
-          isOpen: 1, estimatedDeliveryTime: 1, shopSlug: 1, shopDistance: 1, shopType: 1
+          isOpen: 1, estimatedDeliveryTime: 1, shopSlug: 1, shopDistance: 1, shopType: 1, minimumOrderAmount: 1
         }
       });
 
@@ -163,7 +163,7 @@ export const getAllActiveShops = async (req: Request, res: Response): Promise<vo
     }
 
     const shops = await Shop.find(query)
-      .select('name logo bannerImage themeColors themeColor isOpen estimatedDeliveryTime shopSlug shopType')
+      .select('name logo bannerImage themeColors themeColor isOpen estimatedDeliveryTime shopSlug shopType minimumOrderAmount')
       .sort({ createdAt: -1 });
     res.status(200).json(shops);
   } catch (error) {

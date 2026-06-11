@@ -35,6 +35,7 @@ export default function PublicShopPage() {
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [userToken, setUserToken] = useState("");
+  const [cartLang, setCartLang] = useState<'en' | 'hi'>('en');
 
   // Dynamic Theme Colors (Used as Accents)
   const themeColors = shopInfo?.themeColors?.length > 0 
@@ -511,6 +512,53 @@ export default function PublicShopPage() {
                 <h2 className="text-2xl font-black text-zinc-900 tracking-tighter">Your Order</h2>
                 <button onClick={() => setIsCartOpen(false)} className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500 hover:text-zinc-900 transition-colors"><X className="w-5 h-5" /></button>
               </div>
+
+              {/* Bilingual warning banner at the top of drawer */}
+              {(() => {
+                const minOrder = shopInfo?.minimumOrderAmount || 0;
+                const isBelowMin = cart.length > 0 && totalPrice < minOrder;
+                const remainingAmount = minOrder - totalPrice;
+                if (!isBelowMin) return null;
+                return (
+                  <div className="bg-amber-50 border-b border-amber-100 p-4 flex flex-col gap-3 relative z-10 animate-in fade-in slide-in-from-top duration-300">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex gap-2.5">
+                        <span className="text-lg mt-0.5">⚠️</span>
+                        <div className="flex-1">
+                          <p className="text-[10px] font-black text-amber-900 uppercase tracking-widest mb-1">
+                            {cartLang === 'en' ? 'Minimum Order Required' : 'न्यूनतम आर्डर आवश्यक'}
+                          </p>
+                          <p className="text-xs font-bold text-amber-800 leading-relaxed">
+                            {cartLang === 'en' 
+                              ? `This shop requires a minimum order of ₹${minOrder}. Please add ₹${remainingAmount} more to proceed.` 
+                              : `इस दुकान से ऑर्डर करने के लिए कम से कम ₹${minOrder} की आवश्यकता है। कृपया ₹${remainingAmount} का सामान और जोड़ें।`}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex bg-amber-100 rounded-lg p-0.5 shrink-0 border border-amber-200 shadow-sm">
+                        <button 
+                          onClick={() => setCartLang('en')} 
+                          className={`px-2 py-0.5 rounded-md text-[9px] font-black tracking-wider transition-all ${cartLang === 'en' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-600 hover:text-zinc-900'}`}
+                        >
+                          EN
+                        </button>
+                        <button 
+                          onClick={() => setCartLang('hi')} 
+                          className={`px-2 py-0.5 rounded-md text-[9px] font-black tracking-wider transition-all ${cartLang === 'hi' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-600 hover:text-zinc-900'}`}
+                        >
+                          HI
+                        </button>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => setIsCartOpen(false)} 
+                      className="w-full py-2 bg-amber-600 hover:bg-amber-700 text-white font-black rounded-xl text-[10px] uppercase tracking-widest transition-all active:scale-95 shadow-sm text-center"
+                    >
+                      {cartLang === 'en' ? 'Add More Items' : 'और सामान जोड़ें'}
+                    </button>
+                  </div>
+                );
+              })()}
               
               <div className="flex-1 overflow-y-auto p-6">
                 {cart.length === 0 ? (
@@ -546,9 +594,20 @@ export default function PublicShopPage() {
                     <span className="text-zinc-500 font-bold uppercase tracking-widest text-sm">Total</span>
                     <span className="text-4xl font-black text-zinc-900">₹{totalPrice}</span>
                   </div>
-                  <button onClick={handleProceedToCheckout} className="w-full py-5 rounded-2xl text-white font-black uppercase tracking-widest text-lg transition-transform active:scale-95 shadow-lg" style={getGradientStyle()}>
-                    Checkout Now
-                  </button>
+                  {(() => {
+                    const minOrder = shopInfo?.minimumOrderAmount || 0;
+                    const isBelowMin = cart.length > 0 && totalPrice < minOrder;
+                    return (
+                      <button 
+                        onClick={handleProceedToCheckout} 
+                        disabled={isBelowMin}
+                        className="w-full py-5 rounded-2xl text-white font-black uppercase tracking-widest text-lg transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed shadow-lg" 
+                        style={isBelowMin ? { background: '#d4d4d8' } : getGradientStyle()}
+                      >
+                        {isBelowMin ? (cartLang === 'en' ? 'Limit Not Met' : 'न्यूनतम सीमा अपूर्ण') : (cartLang === 'en' ? 'Checkout Now' : 'ऑर्डर करें')}
+                      </button>
+                    );
+                  })()}
                 </div>
               )}
             </motion.div>
