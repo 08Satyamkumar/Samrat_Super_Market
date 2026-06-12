@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Loader2, CheckCircle2, Bike, PackageOpen, Utensils, Camera, Upload } from "lucide-react";
 import { API_URL } from "@/lib/api";
+import { toast } from "sonner";
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -40,10 +41,22 @@ export function CheckoutModal({
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [paymentProof, setPaymentProof] = useState<File | null>(null);
+  const [checkoutLang, setCheckoutLang] = useState<'en' | 'hi'>('en');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handlePlaceOrder = async () => {
     if (!customerName || !customerPhone || cart.length === 0) return;
+    
+    const minOrder = shopInfo?.minimumOrderAmount || 0;
+    if (totalPrice < minOrder) {
+      toast.error(
+        checkoutLang === 'en' 
+          ? `Minimum order of ₹${minOrder} is required.` 
+          : `इस दुकान से ऑर्डर करने के लिए कम से कम ₹${minOrder} की आवश्यकता है।`
+      );
+      return;
+    }
+
     setIsPlacingOrder(true);
     try {
       const activeShopId = shopInfo?._id || cart[0].shop_id?._id || cart[0].shop_id;
@@ -104,6 +117,52 @@ export function CheckoutModal({
                     <h2 className="text-3xl font-black text-zinc-900 tracking-tighter">Checkout</h2>
                     <button onClick={onClose} className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500 hover:text-zinc-900 transition-colors"><X className="w-5 h-5" /></button>
                   </div>
+
+                  {(() => {
+                    const minOrder = shopInfo?.minimumOrderAmount || 0;
+                    const isBelowMin = totalPrice < minOrder;
+                    const remainingAmount = minOrder - totalPrice;
+                    if (!isBelowMin) return null;
+                    return (
+                      <div className="bg-amber-50 border border-amber-200 rounded-3xl p-4 flex flex-col gap-3 mb-6 animate-in fade-in slide-in-from-top duration-300">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex gap-2">
+                            <span className="text-lg">⚠️</span>
+                            <div className="flex-1">
+                              <p className="text-[10px] font-black text-amber-900 uppercase tracking-widest mb-1">
+                                {checkoutLang === 'en' ? 'Minimum Order Required' : 'न्यूनतम आर्डर आवश्यक'}
+                              </p>
+                              <p className="text-xs font-bold text-amber-800 leading-relaxed">
+                                {checkoutLang === 'en' 
+                                  ? `This shop requires a minimum order of ₹${minOrder}. Please add ₹${remainingAmount} more to proceed.` 
+                                  : `इस दुकान से ऑर्डर करने के लिए कम से कम ₹${minOrder} की आवश्यकता है। कृपया ₹${remainingAmount} का सामान और जोड़ें।`}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex bg-amber-100 rounded-lg p-0.5 shrink-0 border border-amber-200 shadow-sm">
+                            <button 
+                              onClick={() => setCheckoutLang('en')} 
+                              className={`px-1.5 py-0.5 rounded-md text-[9px] font-black tracking-wider transition-all ${checkoutLang === 'en' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-600 hover:text-zinc-900'}`}
+                            >
+                              EN
+                            </button>
+                            <button 
+                              onClick={() => setCheckoutLang('hi')} 
+                              className={`px-1.5 py-0.5 rounded-md text-[9px] font-black tracking-wider transition-all ${checkoutLang === 'hi' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-600 hover:text-zinc-900'}`}
+                            >
+                              HI
+                            </button>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={onClose} 
+                          className="w-full py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-black rounded-2xl text-[10px] uppercase tracking-widest transition-all active:scale-95 shadow-sm text-center"
+                        >
+                          {checkoutLang === 'en' ? 'Add More Items' : 'और सामान जोड़ें'}
+                        </button>
+                      </div>
+                    );
+                  })()}
 
                   <div className="bg-zinc-50 rounded-3xl p-5 border border-zinc-100 mb-6 flex items-center gap-4 shrink-0">
                     <div className="w-14 h-14 rounded-full flex items-center justify-center font-black text-xl text-white shadow-md" style={gradientStyle}>
@@ -230,11 +289,18 @@ export function CheckoutModal({
                   </div>
 
                   <button 
-                    onClick={handlePlaceOrder} disabled={isPlacingOrder || !customerName || !customerPhone}
-                    className="w-full shrink-0 py-5 rounded-2xl text-white font-black uppercase tracking-widest text-lg hover:shadow-xl hover:-translate-y-1 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
-                    style={gradientStyle}
+                    onClick={handlePlaceOrder} 
+                    disabled={isPlacingOrder || !customerName || !customerPhone || (totalPrice < (shopInfo?.minimumOrderAmount || 0))}
+                    className="w-full shrink-0 py-5 rounded-2xl text-white font-black uppercase tracking-widest text-lg hover:shadow-xl hover:-translate-y-1 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                    style={totalPrice < (shopInfo?.minimumOrderAmount || 0) ? { background: '#d4d4d8' } : gradientStyle}
                   >
-                    {isPlacingOrder ? <Loader2 className="w-6 h-6 animate-spin" /> : (paymentMethod === 'upi' ? 'I Have Paid & Place Order' : 'Place Order Now')}
+                    {isPlacingOrder ? (
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                    ) : (totalPrice < (shopInfo?.minimumOrderAmount || 0)) ? (
+                      checkoutLang === 'en' ? 'Limit Not Met' : 'न्यूनतम सीमा अपूर्ण'
+                    ) : (
+                      paymentMethod === 'upi' ? 'I Have Paid & Place Order' : 'Place Order Now'
+                    )}
                   </button>
                 </>
               )}

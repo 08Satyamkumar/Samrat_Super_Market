@@ -234,6 +234,17 @@ export const createPublicOrder = async (req: Request | any, res: Response) => {
       return res.status(400).json({ message: 'No order items' });
     }
 
+    // Backend validation for minimum order amount
+    const orderShop = await Shop.findById(shopId);
+    if (!orderShop) {
+      return res.status(404).json({ message: 'Shop not found' });
+    }
+
+    const minOrder = orderShop.minimumOrderAmount || 0;
+    if (Number(total_amount) < minOrder) {
+      return res.status(400).json({ message: `Minimum order of ₹${minOrder} is required to place an order from this shop.` });
+    }
+
     let paymentProofImage = null;
     let aiVerificationStatus = 'none';
     let aiVerificationMessage = '';

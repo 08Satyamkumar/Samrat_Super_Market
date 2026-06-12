@@ -365,9 +365,22 @@ export default function PublicShopPage() {
                         <div className="flex items-center gap-1.5">
                           <button 
                             onClick={() => { 
-                              if (getCartQuantity(item._id) === 0) addToCart(item); 
-                              if (!userToken && !localStorage.getItem("userToken")) setIsLoginModalOpen(true);
-                              else setIsCheckoutOpen(true);
+                              const minOrder = shopInfo?.minimumOrderAmount || 0;
+                              const projectedTotal = totalPrice + item.price;
+                              
+                              if (projectedTotal < minOrder) {
+                                if (getCartQuantity(item._id) === 0) addToCart(item);
+                                setIsCartOpen(true);
+                                toast.error(
+                                  cartLang === 'en' 
+                                    ? `Minimum order of ₹${minOrder} required. Please add ₹${minOrder - projectedTotal} more.` 
+                                    : `इस दुकान से ऑर्डर करने के लिए कम से कम ₹${minOrder} की आवश्यकता है। कृपया ₹${minOrder - projectedTotal} का सामान और जोड़ें।`
+                                );
+                              } else {
+                                if (getCartQuantity(item._id) === 0) addToCart(item);
+                                if (!userToken && !localStorage.getItem("userToken")) setIsLoginModalOpen(true);
+                                else setIsCheckoutOpen(true);
+                              }
                             }}
                             className="h-9 px-5 flex items-center justify-center rounded-xl text-white font-black uppercase tracking-widest text-[10px] transition-all hover:opacity-90 active:scale-95 shadow-md hover:shadow-lg"
                             style={getGradientStyle()}
@@ -691,12 +704,26 @@ export default function PublicShopPage() {
                   </button>
                   <button 
                     onClick={() => {
+                      const minOrder = shopInfo?.minimumOrderAmount || 0;
+                      const itemPrice = selectedVariant ? Number(selectedVariant.price) : customizingProduct.price;
+                      const projectedTotal = totalPrice + itemPrice;
+
                       addToCart(customizingProduct, selectedVariant);
                       setCustomizingProduct(null);
-                      if (!userToken && !localStorage.getItem("userToken")) {
-                        setIsLoginModalOpen(true);
+
+                      if (projectedTotal < minOrder) {
+                        setIsCartOpen(true);
+                        toast.error(
+                          cartLang === 'en' 
+                            ? `Minimum order of ₹${minOrder} required. Please add ₹${minOrder - projectedTotal} more.` 
+                            : `इस दुकान से ऑर्डर करने के लिए कम से कम ₹${minOrder} की आवश्यकता है। कृपया ₹${minOrder - projectedTotal} का सामान और जोड़ें।`
+                        );
                       } else {
-                        setIsCheckoutOpen(true);
+                        if (!userToken && !localStorage.getItem("userToken")) {
+                          setIsLoginModalOpen(true);
+                        } else {
+                          setIsCheckoutOpen(true);
+                        }
                       }
                     }}
                     className="flex-1 py-4 rounded-2xl text-white font-black uppercase tracking-widest text-[11px] transition-all hover:opacity-90 active:scale-95 shadow-lg shadow-zinc-900/10"

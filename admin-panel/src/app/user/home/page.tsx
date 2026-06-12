@@ -921,9 +921,27 @@ export default function UserHomePage() {
                           ) : (
                             <button 
                               onClick={() => { 
-                                addToCart(product); 
-                                if (!userToken && !localStorage.getItem("userToken")) setIsLoginModalOpen(true);
-                                else setIsCheckoutOpen(true); 
+                                const isDifferentShop = cart.length > 0 && cart[0].shop_id?._id !== product.shop_id?._id;
+                                if (isDifferentShop) {
+                                  addToCart(product);
+                                  return;
+                                }
+
+                                const minOrder = shop.minimumOrderAmount || 0;
+                                const projectedTotal = totalPrice + product.price;
+
+                                addToCart(product);
+                                if (projectedTotal < minOrder) {
+                                  setIsCartOpen(true);
+                                  toast.error(
+                                    cartLang === 'en' 
+                                      ? `Minimum order of ₹${minOrder} required. Please add ₹${minOrder - projectedTotal} more.` 
+                                      : `इस दुकान से ऑर्डर करने के लिए कम से कम ₹${minOrder} की आवश्यकता है। कृपया ₹${minOrder - projectedTotal} का सामान और जोड़ें।`
+                                  );
+                                } else {
+                                  if (!userToken && !localStorage.getItem("userToken")) setIsLoginModalOpen(true);
+                                  else setIsCheckoutOpen(true);
+                                }
                               }}
                               className="h-9 px-6 flex items-center justify-center rounded-xl text-white font-black uppercase tracking-widest text-[10px] transition-all hover:opacity-90 active:scale-95 shadow-md hover:shadow-lg"
                               style={getGradientStyle(shop.themeColors || [shop.themeColor])}
@@ -1169,7 +1187,6 @@ export default function UserHomePage() {
                     );
                   })}
                 </div>
-
                 <div className="flex gap-4">
                   <button 
                     onClick={() => {
@@ -1182,10 +1199,27 @@ export default function UserHomePage() {
                   </button>
                   <button 
                     onClick={() => {
+                      const isDifferentShop = cart.length > 0 && cart[0].shop_id?._id !== customizingProduct.shop_id?._id;
+                      if (isDifferentShop) {
+                        addToCart(customizingProduct, selectedVariant);
+                        setCustomizingProduct(null);
+                        return;
+                      }
+
+                      const minOrder = customizingProduct.shop_id?.minimumOrderAmount || 0;
+                      const itemPrice = selectedVariant ? Number(selectedVariant.price) : customizingProduct.price;
+                      const projectedTotal = totalPrice + itemPrice;
+
                       addToCart(customizingProduct, selectedVariant);
                       setCustomizingProduct(null);
-                      if (!userToken && !localStorage.getItem("userToken")) {
-                        setIsLoginModalOpen(true);
+
+                      if (projectedTotal < minOrder) {
+                        setIsCartOpen(true);
+                        toast.error(
+                          cartLang === 'en' 
+                            ? `Minimum order of ₹${minOrder} required. Please add ₹${minOrder - projectedTotal} more.` 
+                            : `इस दुकान से ऑर्डर करने के लिए कम से कम ₹${minOrder} की आवश्यकता है। कृपया ₹${minOrder - projectedTotal} का सामान और जोड़ें।`
+                        );
                       } else {
                         setIsCheckoutOpen(true);
                       }
