@@ -244,6 +244,10 @@ export default function SellerRegistration() {
                         <select name="category" value={formData.category} onChange={handleInputChange} className="w-full bg-zinc-950/50 border border-zinc-800 text-white rounded-xl py-3 pl-11 pr-4 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all appearance-none cursor-pointer">
                           <option value="veg">Pure Veg Food</option>
                           <option value="nonveg">Non-Veg / Mixed Food</option>
+                          <option value="only-nonveg">Only Non-Veg Food</option>
+                          <option value="bakery">Bakery, Sweets & Desserts</option>
+                          <option value="cafe">Dairy & Cafe / Beverages</option>
+                          <option value="grocery">Grocery & Daily Needs</option>
                         </select>
                       </div>
                     </div>

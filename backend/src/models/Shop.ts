@@ -13,7 +13,7 @@ const shopSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      enum: ['food', 'veg', 'nonveg', 'fashion', 'electronics', 'other'],
+      enum: ['food', 'veg', 'nonveg', 'only-nonveg', 'bakery', 'cafe', 'grocery', 'fashion', 'electronics', 'other'],
       default: 'food',
     },
     status: {
