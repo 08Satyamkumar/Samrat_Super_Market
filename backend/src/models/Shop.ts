@@ -16,6 +16,14 @@ const shopSchema = new mongoose.Schema(
       enum: ['food', 'veg', 'nonveg', 'only-nonveg', 'bakery', 'cafe', 'grocery', 'fashion', 'electronics', 'other'],
       default: 'food',
     },
+    address: {
+      type: String,
+      default: '',
+    },
+    pincode: {
+      type: String,
+      default: '',
+    },
     status: {
       type: String,
       enum: ['pending', 'active', 'suspended', 'banned'],

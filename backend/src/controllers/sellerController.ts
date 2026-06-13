@@ -92,14 +92,14 @@ export const registerSeller = async (req: Request, res: Response): Promise<void>
       name: shopName,
       owner_id: savedSeller._id,
       category: category || 'food', // Default to food
+      address: shopAddress || '',
+      pincode: pincode || '',
       status: 'pending',
       logo: 'https://via.placeholder.com/150',
       isFeatured: false,
       commissionRate: 5, // Default 5%
     });
     
-    // Additional fields like address/pincode can be added to the Shop model later
-    // but for now we create the shop with existing schema fields.
     const savedShop = await newShop.save();
 
     // 5. Update Seller with the new Shop ID

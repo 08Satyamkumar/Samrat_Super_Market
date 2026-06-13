@@ -13,7 +13,7 @@ import { sendOrderAlert } from '../utils/telegram';
 // @access  Private
 export const getShops = async (req: Request, res: Response) => {
   try {
-    const shops = await Shop.find().populate('owner_id', 'name email');
+    const shops = await Shop.find().populate('owner_id', 'name email phone');
     res.json(shops);
   } catch (error) {
     res.status(500).json({ message: 'Server Error' });
@@ -46,6 +46,59 @@ export const updateShopStatus = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Server Error' });
   }
 };
+
+// @desc    Update shop & seller details (Admin only)
+// @route   PUT /api/admin/shops/:id
+// @access  Private/Admin
+export const updateShopDetails = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { shopName, category, address, pincode, ownerName, ownerEmail, ownerPhone } = req.body;
+    const shop = await Shop.findById(req.params.id);
+
+    if (!shop) {
+      res.status(404).json({ message: 'Shop not found' });
+      return;
+    }
+
+    // 1. Update Seller (owner) details if provided
+    if (ownerName || ownerEmail || ownerPhone) {
+      const seller = await Seller.findById(shop.owner_id);
+      if (!seller) {
+        res.status(404).json({ message: 'Associated Seller not found' });
+        return;
+      }
+
+      if (ownerEmail && ownerEmail !== seller.email) {
+        const existingSeller = await Seller.findOne({ email: ownerEmail });
+        if (existingSeller) {
+          res.status(400).json({ message: 'A seller with this email already exists' });
+          return;
+        }
+        seller.email = ownerEmail;
+      }
+
+      if (ownerName) seller.name = ownerName;
+      if (ownerPhone) seller.phone = ownerPhone;
+
+      await seller.save();
+    }
+
+    // 2. Update Shop details
+    if (shopName) shop.name = shopName;
+    if (category) shop.category = category as any;
+    if (address !== undefined) shop.address = address;
+    if (pincode !== undefined) shop.pincode = pincode;
+
+    await shop.save();
+
+    const updatedShop = await Shop.findById(shop._id).populate('owner_id', 'name email phone');
+    res.status(200).json({ message: 'Shop details updated successfully', shop: updatedShop });
+  } catch (error) {
+    console.error('Error updating shop details:', error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+};
+
 
 // @desc    Get all public products from active shops
 // @route   GET /api/shops/products/all

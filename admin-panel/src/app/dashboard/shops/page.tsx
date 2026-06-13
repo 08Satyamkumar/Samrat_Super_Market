@@ -3,14 +3,65 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, Store, AlertCircle, Eye } from "lucide-react";
+import { Check, X, Store, AlertCircle, Eye, Pencil, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { API_URL } from "@/lib/api";
 
 export default function ShopsPage() {
   const [shops, setShops] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedShop, setSelectedShop] = useState<any | null>(null);
+  const [editForm, setEditForm] = useState({
+    shopName: "",
+    category: "",
+    address: "",
+    pincode: "",
+    ownerName: "",
+    ownerEmail: "",
+    ownerPhone: ""
+  });
+  const [isSaving, setIsSaving] = useState(false);
   const router = useRouter();
+
+  const handleEditClick = (shop: any) => {
+    setSelectedShop(shop);
+    setEditForm({
+      shopName: shop.name || "",
+      category: shop.category || "food",
+      address: shop.address || "",
+      pincode: shop.pincode || "",
+      ownerName: shop.owner_id?.name || "",
+      ownerEmail: shop.owner_id?.email || "",
+      ownerPhone: shop.owner_id?.phone || ""
+    });
+  };
+
+  const handleSaveDetails = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedShop) return;
+    setIsSaving(true);
+    try {
+      const res = await fetch(`${API_URL}/api/admin/shops/${selectedShop._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success("Shop details updated successfully");
+        setSelectedShop(null);
+        fetchShops();
+      } else {
+        toast.error(data.message || "Failed to update shop details");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Error updating shop details");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const fetchShops = async () => {
     try {
@@ -147,6 +198,13 @@ export default function ShopsPage() {
                           </button>
                         )}
                         <button 
+                          onClick={() => handleEditClick(shop)}
+                          className="p-2 rounded-lg bg-amber-500/20 text-amber-400 hover:bg-amber-500 hover:text-white transition-colors border border-amber-500/30"
+                          title="Edit Shop Details"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button 
                           onClick={() => handleImpersonate(shop._id)}
                           className="p-2 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500 hover:text-white transition-colors border border-blue-500/30"
                           title="Login as Seller"
@@ -162,6 +220,129 @@ export default function ShopsPage() {
           )}
         </CardContent>
       </Card>
-    </div>
-  );
+    {/* Edit Shop Modal */}
+    {selectedShop && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="bg-zinc-950 border border-white/10 w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl relative">
+          <div className="p-6 bg-zinc-900 border-b border-white/5 flex items-center justify-between">
+            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+              <Pencil className="w-5 h-5 text-emerald-400" /> Edit Shop Details
+            </h3>
+            <button onClick={() => setSelectedShop(null)} className="text-zinc-400 hover:text-white transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <form onSubmit={handleSaveDetails} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Shop Name</label>
+              <input 
+                type="text" 
+                required
+                value={editForm.shopName}
+                onChange={(e) => setEditForm({ ...editForm, shopName: e.target.value })}
+                className="w-full px-4 py-2.5 bg-zinc-900 border border-white/10 rounded-xl text-white outline-none focus:border-emerald-500 transition-colors text-sm"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Category</label>
+                <select 
+                  value={editForm.category}
+                  onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-zinc-900 border border-white/10 rounded-xl text-white outline-none focus:border-emerald-500 transition-colors text-sm capitalize"
+                >
+                  <option value="food">food</option>
+                  <option value="veg">veg</option>
+                  <option value="nonveg">nonveg</option>
+                  <option value="only-nonveg">only-nonveg</option>
+                  <option value="bakery">bakery</option>
+                  <option value="cafe">cafe</option>
+                  <option value="grocery">grocery</option>
+                  <option value="fashion">fashion</option>
+                  <option value="electronics">electronics</option>
+                  <option value="other">other</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Pincode</label>
+                <input 
+                  type="text" 
+                  value={editForm.pincode}
+                  onChange={(e) => setEditForm({ ...editForm, pincode: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-zinc-900 border border-white/10 rounded-xl text-white outline-none focus:border-emerald-500 transition-colors text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Shop Address</label>
+              <textarea 
+                rows={2}
+                value={editForm.address}
+                onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                className="w-full px-4 py-2.5 bg-zinc-900 border border-white/10 rounded-xl text-white outline-none focus:border-emerald-500 transition-colors text-sm resize-none"
+              />
+            </div>
+
+            <div className="border-t border-white/5 pt-4 space-y-4">
+              <h4 className="text-sm font-bold text-emerald-400">Seller (Owner) Info</h4>
+              
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Owner Name</label>
+                <input 
+                  type="text" 
+                  required
+                  value={editForm.ownerName}
+                  onChange={(e) => setEditForm({ ...editForm, ownerName: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-zinc-900 border border-white/10 rounded-xl text-white outline-none focus:border-emerald-500 transition-colors text-sm"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Owner Email</label>
+                  <input 
+                    type="email" 
+                    required
+                    value={editForm.ownerEmail}
+                    onChange={(e) => setEditForm({ ...editForm, ownerEmail: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-zinc-900 border border-white/10 rounded-xl text-white outline-none focus:border-emerald-500 transition-colors text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Owner Phone</label>
+                  <input 
+                    type="text" 
+                    value={editForm.ownerPhone}
+                    onChange={(e) => setEditForm({ ...editForm, ownerPhone: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-zinc-900 border border-white/10 rounded-xl text-white outline-none focus:border-emerald-500 transition-colors text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-white/5 pt-4 flex items-center justify-end gap-3">
+              <button 
+                type="button" 
+                onClick={() => setSelectedShop(null)}
+                className="px-4 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 text-sm font-medium border border-white/5 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                type="submit" 
+                disabled={isSaving}
+                className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-500/50 text-white text-sm font-medium transition-colors flex items-center gap-2"
+              >
+                {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+                Save Changes
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )}
+  </div>
+);
 }

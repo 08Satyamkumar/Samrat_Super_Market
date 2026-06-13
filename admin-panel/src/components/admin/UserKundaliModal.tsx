@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, User, ShoppingBag, Clock, Loader2, ArrowRight, CheckCircle2 } from "lucide-react";
+import { X, User, ShoppingBag, Clock, Loader2, ArrowRight, CheckCircle2, Pencil } from "lucide-react";
 import { API_URL } from "@/lib/api";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -9,14 +9,21 @@ interface UserKundaliModalProps {
   userId: string | null;
   isOpen: boolean;
   onClose: () => void;
+  onUpdate?: () => void;
 }
 
-export function UserKundaliModal({ userId, isOpen, onClose }: UserKundaliModalProps) {
+export function UserKundaliModal({ userId, isOpen, onClose, onUpdate }: UserKundaliModalProps) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [formName, setFormName] = useState("");
+  const [formPhone, setFormPhone] = useState("");
+  const [formEmail, setFormEmail] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (userId && isOpen) {
+      setIsEditing(false);
       fetchUserDetails();
     }
   }, [userId, isOpen]);
@@ -28,6 +35,9 @@ export function UserKundaliModal({ userId, isOpen, onClose }: UserKundaliModalPr
       if (res.ok) {
         const result = await res.json();
         setData(result);
+        setFormName(result.user?.name || "");
+        setFormPhone(result.user?.phone || "");
+        setFormEmail(result.user?.email || "");
       } else {
         toast.error("Failed to load user details");
       }
@@ -35,6 +45,36 @@ export function UserKundaliModal({ userId, isOpen, onClose }: UserKundaliModalPr
       toast.error("Server error");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveUser = async () => {
+    if (!userId) return;
+    setIsSaving(true);
+    try {
+      const res = await fetch(`${API_URL}/api/admin/users/${userId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formName,
+          phone: formPhone,
+          email: formEmail,
+        }),
+      });
+      const result = await res.json();
+      if (res.ok) {
+        toast.success("User details updated successfully");
+        setIsEditing(false);
+        fetchUserDetails();
+        if (onUpdate) onUpdate();
+      } else {
+        toast.error(result.message || "Failed to update user details");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Error updating user details");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -70,17 +110,76 @@ export function UserKundaliModal({ userId, isOpen, onClose }: UserKundaliModalPr
                 <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md border border-white/30 shadow-inner">
                   <User className="w-7 h-7" />
                 </div>
-                <div>
-                  <h2 className="text-2xl font-black">{data?.user?.name || 'Loading...'}</h2>
-                  <p className="text-blue-100 font-medium">{data?.user?.phone || 'Loading...'}</p>
-                </div>
+                {isEditing ? (
+                  <div className="space-y-2 py-1">
+                    <input 
+                      type="text" 
+                      value={formName} 
+                      onChange={(e) => setFormName(e.target.value)}
+                      placeholder="Name"
+                      className="bg-white/10 border border-white/20 rounded-lg px-2.5 py-1 text-white font-black text-lg outline-none placeholder:text-white/50 focus:bg-white/25 focus:border-white/40 transition-all w-52 block text-sm"
+                    />
+                    <input 
+                      type="text" 
+                      value={formPhone} 
+                      onChange={(e) => setFormPhone(e.target.value)}
+                      placeholder="Phone"
+                      className="bg-white/10 border border-white/20 rounded-lg px-2.5 py-1 text-white text-xs outline-none placeholder:text-white/50 focus:bg-white/25 focus:border-white/40 transition-all w-52 block"
+                    />
+                    <input 
+                      type="email" 
+                      value={formEmail} 
+                      onChange={(e) => setFormEmail(e.target.value)}
+                      placeholder="Email (Optional)"
+                      className="bg-white/10 border border-white/20 rounded-lg px-2.5 py-1 text-white text-[11px] outline-none placeholder:text-white/50 focus:bg-white/25 focus:border-white/40 transition-all w-52 block"
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <h2 className="text-2xl font-black">{data?.user?.name || 'Loading...'}</h2>
+                    <p className="text-blue-100 font-medium text-sm">{data?.user?.phone || 'Loading...'}</p>
+                    {data?.user?.email && (
+                      <p className="text-blue-200/80 text-xs mt-0.5 font-medium">{data.user.email}</p>
+                    )}
+                  </div>
+                )}
               </div>
-              <button 
-                onClick={onClose}
-                className="w-10 h-10 flex items-center justify-center rounded-full bg-black/20 text-white hover:bg-black/40 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                {isEditing ? (
+                  <>
+                    <button 
+                      onClick={handleSaveUser}
+                      disabled={isSaving}
+                      className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-500/50 text-white font-bold text-xs transition-colors flex items-center gap-1.5 shadow-md shadow-emerald-950/20 active:scale-95"
+                    >
+                      {isSaving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                      Save
+                    </button>
+                    <button 
+                      onClick={() => setIsEditing(false)}
+                      className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition-colors border border-white/15 active:scale-95"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button 
+                      onClick={() => setIsEditing(true)}
+                      className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors border border-white/15"
+                      title="Edit User Details"
+                    >
+                      <Pencil className="w-4.5 h-4.5" />
+                    </button>
+                    <button 
+                      onClick={onClose}
+                      className="w-10 h-10 flex items-center justify-center rounded-full bg-black/20 text-white hover:bg-black/40 transition-colors border border-transparent"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
 
             {loading ? (

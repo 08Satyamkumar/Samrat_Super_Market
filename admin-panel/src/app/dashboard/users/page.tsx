@@ -208,6 +208,7 @@ export default function UsersCRMPage() {
         userId={selectedUserId} 
         isOpen={!!selectedUserId} 
         onClose={() => setSelectedUserId(null)} 
+        onUpdate={fetchUsers}
       />
     </div>
   );

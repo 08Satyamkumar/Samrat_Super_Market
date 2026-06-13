@@ -94,6 +94,7 @@ export const getUsers = async (req: Request, res: Response) => {
         $project: {
           name: 1,
           phone: 1,
+          email: 1,
           status: 1,
           createdAt: 1,
           totalOrders: { $size: '$orders' },
@@ -167,4 +168,46 @@ export const getUserDetails = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Server error while fetching user details' });
   }
 };
+
+// @desc    Update user details (Admin only)
+// @route   PUT /api/admin/users/:id
+// @access  Private/Admin
+export const updateUserDetails = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { name, phone, email } = req.body;
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+
+    // Check duplicate phone number if changing phone
+    if (phone && phone !== user.phone) {
+      const phoneRegex = /^[0-9]{10}$/;
+      if (!phoneRegex.test(phone)) {
+        res.status(400).json({ message: 'Invalid phone number format. Must be 10 digits.' });
+        return;
+      }
+
+      const existingUser = await User.findOne({ phone });
+      if (existingUser) {
+        res.status(400).json({ message: 'A user with this phone number already exists' });
+        return;
+      }
+      user.phone = phone;
+    }
+
+    if (name) user.name = name;
+    if (email !== undefined) user.email = email;
+
+    await user.save();
+
+    res.status(200).json({ message: 'User details updated successfully', user });
+  } catch (error) {
+    console.error('Error updating user details:', error);
+    res.status(500).json({ message: 'Server error while updating user details' });
+  }
+};
+
 

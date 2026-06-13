@@ -2,7 +2,7 @@ import express from 'express';
 import { authAdmin, getAdminProfile, registerAdmin } from '../controllers/adminController';
 import { protectAdmin, superAdminOnly } from '../middlewares/authMiddleware';
 import { getDashboardStats, globalSearch } from '../controllers/dashboardController';
-import { getShops, updateShopStatus, impersonateSeller } from '../controllers/shopController';
+import { getShops, updateShopStatus, impersonateSeller, updateShopDetails } from '../controllers/shopController';
 
 const router = express.Router();
 
@@ -25,12 +25,13 @@ router.route('/search').get(globalSearch);
 router.route('/shops').get(getShops);
 router.route('/shops/:id/status').put(updateShopStatus);
 router.route('/shops/:id/impersonate').post(impersonateSeller);
+router.route('/shops/:id').put(updateShopDetails);
 
-import { getUsers, updateUserStatus, getUserDetails } from '../controllers/adminController';
+import { getUsers, updateUserStatus, getUserDetails, updateUserDetails } from '../controllers/adminController';
 
 // User CRM Routes (Temporarily public for MVP frontend testing)
 router.route('/users').get(getUsers);
-router.route('/users/:id').get(getUserDetails);
+router.route('/users/:id').get(getUserDetails).put(updateUserDetails);
 router.route('/users/:id/status').put(updateUserStatus);
 
 export default router;
