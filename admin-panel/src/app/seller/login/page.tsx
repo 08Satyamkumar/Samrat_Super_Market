@@ -284,7 +284,7 @@ export default function SellerLogin() {
                   <div className="mt-8 text-center">
                     <p className="text-sm text-zinc-400">
                       Want to become a seller?{" "}
-                      <a href="#" className="text-white font-medium hover:text-violet-400 transition-colors underline underline-offset-4 decoration-zinc-700 hover:decoration-violet-400">
+                      <a href="/seller/register" className="text-white font-medium hover:text-violet-400 transition-colors underline underline-offset-4 decoration-zinc-700 hover:decoration-violet-400">
                         Apply here
                       </a>
                     </p>
