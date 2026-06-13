@@ -78,6 +78,21 @@ const orderSchema = new mongoose.Schema(
       enum: ['delivery', 'pickup', 'dine-in'],
       default: 'delivery',
     },
+    deliveryAddress: {
+      type: String,
+      default: '',
+    },
+    deliveryLocation: {
+      type: {
+        type: String,
+        enum: ['Point'],
+        default: 'Point',
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+        default: [0, 0],
+      },
+    },
     isSellerNotified: {
       type: Boolean,
       default: false,

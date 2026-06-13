@@ -273,7 +273,7 @@ export const getPublicShopProducts = async (req: Request, res: Response) => {
 export const createPublicOrder = async (req: Request | any, res: Response) => {
   try {
     const { shopId } = req.params;
-    let { customerName, customerPhone, orderItems, total_amount, paymentMethod, userId, orderType } = req.body;
+    let { customerName, customerPhone, orderItems, total_amount, paymentMethod, userId, orderType, deliveryAddress, deliveryLocation } = req.body;
 
     if (typeof orderItems === 'string') {
       try {
@@ -335,6 +335,20 @@ export const createPublicOrder = async (req: Request | any, res: Response) => {
       }
     }
 
+    let parsedLocation = undefined;
+    if (deliveryLocation) {
+      try {
+        const locObj = typeof deliveryLocation === 'string' ? JSON.parse(deliveryLocation) : deliveryLocation;
+        if (Array.isArray(locObj)) {
+          parsedLocation = { type: 'Point', coordinates: locObj.map(Number) };
+        } else if (locObj && locObj.coordinates) {
+          parsedLocation = { type: 'Point', coordinates: locObj.coordinates.map(Number) };
+        }
+      } catch (e) {
+        console.error("Failed to parse deliveryLocation:", e);
+      }
+    }
+
     const order = new Order({
       shop_id: shopId,
       user_id: userId,
@@ -346,6 +360,8 @@ export const createPublicOrder = async (req: Request | any, res: Response) => {
       isPaid: false, // Default unpaid for 'Pay at Shop/QR'
       status: 'pending',
       orderType: orderType || 'delivery',
+      deliveryAddress: deliveryAddress || '',
+      deliveryLocation: parsedLocation,
       paymentProofImage,
       aiVerificationStatus,
       aiVerificationMessage

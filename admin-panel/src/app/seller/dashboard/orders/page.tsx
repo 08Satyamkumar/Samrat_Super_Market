@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingBag, Clock, CheckCircle2, XCircle, Phone, MessageCircle, Printer, Search, Timer, Check } from "lucide-react";
+import { ShoppingBag, Clock, CheckCircle2, XCircle, Phone, MessageCircle, Printer, Search, Timer, Check, MapPin, Bike, PackageOpen, Utensils } from "lucide-react";
 import { toast } from "sonner";
 import { API_URL } from "@/lib/api";
 
@@ -262,7 +262,22 @@ export default function OrdersPage() {
                           </span>
                         )}
                       </div>
-                      <h3 className="font-bold text-lg text-foreground">{order.customerName}</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-lg text-foreground">{order.customerName}</h3>
+                        {/* Order Type Badge */}
+                        {order.orderType && (
+                          <span className={`inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                            order.orderType === 'delivery' ? 'bg-sky-500/10 border-sky-500/20 text-sky-600 dark:text-sky-400' :
+                            order.orderType === 'pickup' ? 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400' :
+                            'bg-purple-500/10 border-purple-500/20 text-purple-600 dark:text-purple-400'
+                          }`}>
+                            {order.orderType === 'delivery' && <Bike className="w-2.5 h-2.5" />}
+                            {order.orderType === 'pickup' && <PackageOpen className="w-2.5 h-2.5" />}
+                            {order.orderType === 'dine-in' && <Utensils className="w-2.5 h-2.5" />}
+                            {order.orderType}
+                          </span>
+                        )}
+                      </div>
                       
                       {/* Contact Actions */}
                       <div className="flex items-center gap-2 mt-2">
@@ -273,6 +288,26 @@ export default function OrdersPage() {
                           <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
                         </a>
                       </div>
+
+                      {/* Delivery Address & Map Navigation */}
+                      {order.orderType === 'delivery' && (order.deliveryAddress || order.deliveryLocation) && (
+                        <div className="mt-3 p-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-150 dark:border-zinc-800/80 rounded-2xl max-w-sm">
+                          <p className="text-[9px] uppercase tracking-wider font-extrabold text-zinc-400 dark:text-zinc-500 mb-1">Delivery Address</p>
+                          <p className="text-xs text-muted-foreground font-semibold leading-relaxed mb-2">
+                            {order.deliveryAddress || "📍 Geolocation only"}
+                          </p>
+                          {order.deliveryLocation?.coordinates && order.deliveryLocation.coordinates[0] !== 0 && (
+                            <a 
+                              href={`https://www.google.com/maps/search/?api=1&query=${order.deliveryLocation.coordinates[1]},${order.deliveryLocation.coordinates[0]}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl transition-all shadow-md shadow-emerald-500/10 active:scale-95"
+                            >
+                              <MapPin className="w-3.5 h-3.5" /> Navigate on Map
+                            </a>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div className="text-right flex flex-col items-end gap-2">
                       <span className="block font-black text-2xl text-foreground">₹{order.total_amount}</span>

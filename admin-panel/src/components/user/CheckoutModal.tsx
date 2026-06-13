@@ -44,6 +44,48 @@ export function CheckoutModal({
   const [checkoutLang, setCheckoutLang] = useState<'en' | 'hi'>('en');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Delivery Address & Geolocation States
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [gpsCoordinates, setGpsCoordinates] = useState<[number, number] | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+  const [locationStatus, setLocationStatus] = useState<"idle" | "fetching" | "success" | "error">("idle");
+
+  const detectLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error(checkoutLang === 'en' ? "Geolocation is not supported by your browser." : "आपका ब्राउज़र लोकेशन का समर्थन नहीं करता है।");
+      setLocationStatus("error");
+      return;
+    }
+    
+    setIsLocating(true);
+    setLocationStatus("fetching");
+    
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setGpsCoordinates([longitude, latitude]); // GeoJSON coordinates format is [lng, lat]
+        setLocationStatus("success");
+        setIsLocating(false);
+        toast.success(checkoutLang === 'en' ? "Location detected successfully! 📍" : "लोकेशन सफलतापूर्वक मिल गई! 📍");
+      },
+      (error) => {
+        console.error("Geolocation error:", error);
+        let errorMsg = "Unable to retrieve your location.";
+        if (error.code === error.PERMISSION_DENIED) {
+          errorMsg = "Location permission denied. Please allow access in browser settings.";
+        }
+        toast.error(checkoutLang === 'en' ? errorMsg : "लोकेशन एक्सेस नहीं मिल पाया। कृपया ब्राउज़र सेटिंग्स में अनुमति दें।");
+        setLocationStatus("error");
+        setIsLocating(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
+  };
+
   const handlePlaceOrder = async () => {
     if (!customerName || !customerPhone || cart.length === 0) return;
     
@@ -55,6 +97,18 @@ export function CheckoutModal({
           : `इस दुकान से ऑर्डर करने के लिए कम से कम ₹${minOrder} की आवश्यकता है।`
       );
       return;
+    }
+
+    // Validation for delivery address
+    if (orderType === 'delivery') {
+      if (!deliveryAddress.trim() && !gpsCoordinates) {
+        toast.error(
+          checkoutLang === 'en' 
+            ? "Please enter your delivery address or detect your location to proceed." 
+            : "आगे बढ़ने के लिए कृपया डिलीवरी का पता लिखें या लोकेशन डिटेक्ट करें।"
+        );
+        return;
+      }
     }
 
     setIsPlacingOrder(true);
@@ -69,6 +123,13 @@ export function CheckoutModal({
       formData.append('total_amount', totalPrice.toString());
       formData.append('paymentMethod', paymentMethod === 'upi' ? 'Online/UPI' : 'Cash on Delivery');
       formData.append('orderType', orderType);
+      
+      if (orderType === 'delivery') {
+        formData.append('deliveryAddress', deliveryAddress);
+        if (gpsCoordinates) {
+          formData.append('deliveryLocation', JSON.stringify(gpsCoordinates));
+        }
+      }
       
       if (paymentMethod === 'upi' && paymentProof) {
         formData.append('paymentProof', paymentProof);
@@ -203,6 +264,66 @@ export function CheckoutModal({
                         </button>
                       )}
                     </div>
+                    
+                    {/* Delivery Details Section */}
+                    <AnimatePresence>
+                      {orderType === 'delivery' && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="overflow-hidden mb-6"
+                        >
+                          <div className="bg-zinc-50 border border-zinc-100 rounded-3xl p-5 space-y-4">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block ml-1">
+                                {checkoutLang === 'en' ? 'Delivery Address' : 'डिलिवरी का पता'}
+                              </span>
+                              
+                              <button 
+                                type="button"
+                                onClick={detectLocation}
+                                disabled={isLocating}
+                                className={`text-[9px] font-bold px-3 py-1.5 rounded-full flex items-center gap-1 transition-all ${
+                                  locationStatus === 'success' 
+                                    ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 shadow-sm' 
+                                    : 'bg-zinc-900 text-white hover:bg-zinc-800'
+                                }`}
+                              >
+                                {isLocating ? (
+                                  <Loader2 className="w-3 h-3 animate-spin text-white" />
+                                ) : (
+                                  <span>📍</span>
+                                )}
+                                {locationStatus === 'success' 
+                                  ? (checkoutLang === 'en' ? 'Location Set' : 'लोकेशन सेट है') 
+                                  : (checkoutLang === 'en' ? 'Detect Location' : 'लोकेशन डिटेक्ट करें')}
+                              </button>
+                            </div>
+                            
+                            <textarea 
+                              rows={3}
+                              required
+                              value={deliveryAddress}
+                              onChange={(e) => setDeliveryAddress(e.target.value)}
+                              placeholder={
+                                checkoutLang === 'en' 
+                                  ? "Enter flat/house number, building name, street, and landmark..." 
+                                  : "फ्लैट/घर का नंबर, बिल्डिंग, गली और कोई लैंडमार्क लिखें..."
+                              }
+                              className="w-full px-4 py-3 text-sm bg-white border border-zinc-200 rounded-2xl outline-none focus:border-zinc-900 transition-colors resize-none placeholder:text-zinc-400 font-medium"
+                            />
+                            
+                            {gpsCoordinates && (
+                              <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 bg-emerald-50/50 px-3 py-1.5 rounded-xl border border-emerald-200/50 w-fit">
+                                <CheckCircle2 className="w-3.5 h-3.5" /> 
+                                GPS Coordinates: {gpsCoordinates[1].toFixed(5)}, {gpsCoordinates[0].toFixed(5)}
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                     
                     <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block mb-4 ml-2">Select Payment</span>
                     <div className="grid grid-cols-2 gap-3">
