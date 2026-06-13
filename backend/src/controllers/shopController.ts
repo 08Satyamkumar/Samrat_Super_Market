@@ -185,7 +185,7 @@ export const getPublicShop = async (req: Request, res: Response) => {
     } else {
       // Find by name, case insensitive, and MUST be active
       shop = await Shop.findOne({ 
-        name: { $regex: new RegExp(`^${identifier.replace(/-/g, ' ')}$`, 'i') },
+        name: { $regex: new RegExp(`^${identifier.replace(/-/g, '\\s+')}$`, 'i') },
         status: 'active'
       }).populate('owner_id', 'name phone email');
     }
